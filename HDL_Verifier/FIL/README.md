@@ -1,4 +1,4 @@
-# Capítulo 1. Introducción
+# Introducción
 
 FPGA-in-the-Loop (FIL) en HDL Verifier para MATLAB/Simulink es una técnica de
 verificación en la que el diseño HDL (DUT) se ejecuta en una FPGA física,
@@ -33,7 +33,7 @@ Para ejecutar FIL se requieren licencias activas de:
   Vivado para AMD/Xilinx o Quartus para Intel), junto con sus *support packages*
   cuando aplique.
 
-# Capítulo 2. Flujo operativo del asistente FIL
+# Flujo operativo del asistente FIL
 
 ## Iniciar el asistente
 
@@ -160,7 +160,7 @@ Generación del bloque FIL desde el asistente.
   elegido.
 
 
-# Capítulo 3. Bloque FIL en Simulink
+# Bloque FIL en Simulink
 
 ## Bloque FIL en Simulink: uso y conexión
 
