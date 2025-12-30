@@ -45,7 +45,7 @@ Para ejecutar FIL se requieren licencias activas de:
 
    Pantalla inicial del asistente FIL.
 
-   ![Pantalla inicial del asistente FIL](images/gui_fw_1.png)
+   <img src="images/gui_fw_1.png" alt="Pantalla inicial del asistente FIL" width="60%">
 
 2. Elija **Simulink** como entorno de simulación.
 3. Seleccione la tarjeta de desarrollo FPGA. Se recomienda instalar *HDL Verifier
@@ -72,13 +72,14 @@ generar y programar el diseño. En **Board name** se listan opciones predefinida
 si su FPGA no aparece, debe crearla desde **Create custom board** al final de la
 lista.
 
-Ventana inicial del FIL Wizard.
+Ventana inicial del FIL Wizard y asistente de nueva placa FPGA.
 
-![Ventana inicial del FIL Wizard](images/Board1.png)
-
-Asistente de nueva placa FPGA.
-
-![Asistente de nueva placa FPGA](images/Board2.png)
+<table>
+  <tr>
+    <td><img src="images/Board1.png" alt="Ventana inicial del FIL Wizard" width="60%"></td>
+    <td><img src="images/Board2.png" alt="Asistente de nueva placa FPGA" width="60%"></td>
+  </tr>
+</table>
 
 Luego se define la interfaz con la que se conectará la FPGA. En este documento
 se utiliza **JTAG**, por lo que no se profundiza en las demás opciones; estas
@@ -92,7 +93,7 @@ la implementación fallará.
 
 Selección de interfaz y frecuencia de reloj.
 
-![Selección de interfaz y frecuencia de reloj](images/Board3.png)
+<img src="images/Board3.png" alt="Selección de interfaz y frecuencia de reloj" width="60%">
 
 En la opción de cadena JTAG, continúe con *Next* a menos que el JTAG no esté
 conectado directamente a la FPGA, es decir, si hay otros dispositivos en serie
@@ -104,21 +105,19 @@ la configuración es correcta para usar el FIL Wizard.
 
 Validación de conexión con la FPGA.
 
-![Validación de conexión con la FPGA](images/Board4.png)
+<img src="images/Board4.png" alt="Validación de conexión con la FPGA" width="60%">
 
 ## Selección de fuentes HDL y configuración
 
-Añadir archivos HDL.
+Añadir archivos HDL, tabla de puertos detectados y configuración de salidas.
 
-![Añadir archivos HDL](images/gui_add_files.png)
-
-Tabla de puertos detectados.
-
-![Tabla de puertos detectados](images/gui_ports.png)
-
-Configuración de salidas.
-
-![Configuración de salidas](images/gui_outputs.png)
+<table>
+  <tr>
+    <td><img src="images/gui_add_files.png" alt="Añadir archivos HDL" width="60%"></td>
+    <td><img src="images/gui_ports.png" alt="Tabla de puertos detectados" width="60%"></td>
+    <td><img src="images/gui_outputs.png" alt="Configuración de salidas" width="60%"></td>
+  </tr>
+</table>
 
 1. Añada los archivos HDL y declare el *top* del diseño.
 2. Revise la tabla de puertos del DUT; el asistente analiza el módulo superior y
@@ -141,7 +140,7 @@ Configuración de salidas.
 
 Generación del bloque FIL desde el asistente.
 
-![Generación del bloque FIL desde el asistente](images/gui_fw_gen_fil_block.png)
+<img src="images/gui_fw_gen_fil_block.png" alt="Generación del bloque FIL desde el asistente" width="60%">
 
 1. Indique la carpeta de salida para los artefactos generados.
 2. Pulse **Build** para lanzar la generación del bloque FIL y el bitstream.
@@ -160,33 +159,6 @@ Generación del bloque FIL desde el asistente.
 - Conecte el bloque FIL al resto del diagrama y ejecute la simulación en el modo
   elegido.
 
-## Reportes de interés
-
-Los reportes de síntesis e implementación se encuentran en la carpeta
-`project_name_fil`. Este nombre es el predeterminado del asistente y puede
-modificarse en la última etapa del *FIL Wizard*; por defecto `project_name`
-coincide con el nombre del *top* HDL. Por ejemplo, en
-`project_name_fil.runs/impl_1/project_name_fil_utilization_placed.rpt` se
-detalla la cantidad de LUT usadas. Se debe tener en cuenta que este conteo
-contempla tanto el módulo como el *wrapper* necesario para utilizar el módulo
-con FIL. Además, en
-`project_name_fil.runs/impl_1/project_name_fil_utilization_placed.rpt` se puede
-revisar el *timing*, que verifica si para la frecuencia de reloj designada la
-FPGA cumple la temporización.
-
-En `project_name_fil/project_name_fil.runs/synth_1/runme.log` existe una sección
-*Report Cell Usage* similar a la de implementación, pero en síntesis se listan
-los módulos del *wrapper* como módulos sin contar sus LUTs, lo que permite una
-mejor idea del consumo por módulo. Al tratarse de síntesis, estos valores pueden
-cambiar al pasar a implementación.
-
-Sección *Report Cell Usage* en síntesis.
-
-![Sección Report Cell Usage en síntesis](images/report_cell_usage_synth.png)
-
-Sección *Report Cell Usage* en implementación.
-
-![Sección Report Cell Usage en implementación](images/report_cell_usage_impl.png)
 
 # Capítulo 3. Bloque FIL en Simulink
 
@@ -196,7 +168,7 @@ El bloque FIL generado por el asistente se inserta en el modelo de Simulink y se
 gestiona mediante dos pestañas principales. La imagen siguiente muestra la
 interfaz general.
 
-![Configuración de atributos de señal en el bloque FIL](images/BLOCK_FIL_Diagram.png)
+<img src="images/BLOCK_FIL_Diagram.png" alt="Configuración de atributos de señal en el bloque FIL" width="60%">
 
 ### Pestaña *Programming File*
 
@@ -234,7 +206,7 @@ longitud específica.
 
 Configuración de atributos de señal en el bloque FIL.
 
-![Configuración de atributos de señal en el bloque FIL](images/signal_atribbutes_block_fil.png)
+<img src="images/signal_atribbutes_block_fil.png" alt="Configuración de atributos de señal en el bloque FIL" width="60%">
 
 - **Sample time:** seleccione *inherit via propagation* para heredar el tiempo
   de muestreo desde el bloque conectado; *inherit via internal rule* establece
@@ -313,9 +285,12 @@ sobre restricciones.
 Uso del bloque *Data Type Conversion*: conversión de entrada (izquierda) y
 parámetros de salida (derecha).
 
-![Conversión de entrada con Data Type Conversion](images/diagram_data_type_converter.png)
-
-![Parámetros de salida de Data Type Conversion](images/data_type_conversion_parameter.png)
+<table>
+  <tr>
+    <td><img src="images/diagram_data_type_converter.png" alt="Conversión de entrada con Data Type Conversion" width="60%"></td>
+    <td><img src="images/data_type_conversion_parameter.png" alt="Parámetros de salida de Data Type Conversion" width="60%"></td>
+  </tr>
+</table>
 
 Si una salida del bloque FIL se retroalimenta a una entrada, inserte un
 *Zero-Order Hold* o un *Unit Delay* en ese lazo. Simulink no permite un ciclo
