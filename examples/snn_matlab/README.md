@@ -85,6 +85,11 @@ Imagenes de referencia:
 - `images/workflow_4.png`
 - `images/workflow_5_comparacion_salidas.png`
 
+![Workflow Advisor: carga DUT y testbench](images/workflow_1.png)
+![Fixed-point conversion (saturate)](images/workflow_3.png)
+![Fixed-point: comparacion I/O](images/workflow_4.png)
+![Comparacion salidas float vs fixed](images/workflow_5_comparacion_salidas.png)
+
 ## 8) Generacion HDL y optimizacion
 
 - Target por defecto.
@@ -101,6 +106,12 @@ Imagenes de referencia:
 - `images/workflow_7_recursos_usados_stream.png`
 - `images/workflow_7_recursos_usados_sin_stream.png`
 
+![Target de generacion](images/workflow_6_hdl_code_generation_target.png)
+![Optimizacion con Stream Loop](images/workflow_6_hdl_code_generation_optimization.png)
+![Clocks & Ports](images/workflow_6_hdl_code_generation_clock_and_port.png)
+![Recursos con Stream Loop](images/workflow_7_recursos_usados_stream.png)
+![Recursos sin Stream Loop](images/workflow_7_recursos_usados_sin_stream.png)
+
 ## 9) Co-simulacion (HDL Verifier)
 
 Configurar el simulador en el PATH (ejemplo Vivado):
@@ -115,6 +126,9 @@ Imagenes de referencia:
 - `images/workflow_8_cosimlation.png`
 - `images/workflow_8_cosimlation_output_Result.png`
 
+![Configuracion co-simulacion](images/workflow_8_cosimlation.png)
+![Resultado co-simulacion](images/workflow_8_cosimlation_output_Result.png)
+
 ## 10) FPGA-in-the-Loop (FIL)
 
 El flujo de FIL es mas lento porque incluye sintesis, implementacion y bitstream. Se espera el mismo resultado que en co-simulacion.
@@ -122,6 +136,9 @@ El flujo de FIL es mas lento porque incluye sintesis, implementacion y bitstream
 Imagenes de referencia:
 - `images/workflow_9_FIL.png`
 - `images/workflow_9_FIL_Result.png`
+
+![Configuracion FIL](images/workflow_9_FIL.png)
+![Resultado FIL](images/workflow_9_FIL_Result.png)
 
 ## 11) Verificacion en Simulink
 
@@ -136,6 +153,13 @@ Imagenes de referencia:
 - `images/workflow_10_FIL_analizer.png`
 - `images/workflow_10_FIL_cosim_diagram.png`
 - `images/workflow_10_FIL_cosim_result.png`
+
+![Bloque FIL en Simulink](images/workflow_10_FIL_block.png)
+![Config del bloque FIL](images/workflow_10_FIL_block_config.png)
+![Entorno de prueba con in_ts](images/workflow_10_diagram.png)
+![Analisis con Logic Analyzer](images/workflow_10_FIL_analizer.png)
+![Diagrama comparacion con delay](images/workflow_10_FIL_cosim_diagram.png)
+![Resultado MATLAB vs FIL](images/workflow_10_FIL_cosim_result.png)
 
 ## 12) Prueba con Computer Vision Toolbox (opcional)
 
@@ -175,6 +199,8 @@ end
 
 Imagen de referencia:
 - `images/workflow_10_FIL_cosim_with_CVT.png`
+
+![Prueba con Computer Vision Toolbox](images/workflow_10_FIL_cosim_with_CVT.png)
 
 ## 13) Compilar el reporte
 
