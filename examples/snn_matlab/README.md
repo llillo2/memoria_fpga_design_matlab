@@ -37,24 +37,22 @@ Las Spiking Neural Networks (SNN) procesan informacion mediante spikes (eventos 
 
 ## Modelado de la SNN en MATLAB/Simulink
 
-### Modelo matematico (sin multiplicaciones)
+### Modelo matematico (equivalente al codigo)
 
-Entrada sinaptica:
+El modelo sigue la misma logica de `snn.m`: para cada neurona de salida se acumulan solo los pesos con spike activo y se compara contra el umbral.
 
-- I(t) = suma de w_i solo si s_i(t)=1
+Para cada salida `j`:
 
-Dinamica y disparo:
+- Entrada binaria: `s_i` (bit i de `spikes_in`).
+- Acumulador: `acc_j = sum_{i: s_i=1} W(i,j)`.
+- Disparo: `y_j = 1 si acc_j >= theta; 0 en caso contrario`.
 
-- V(t) = V(t-1) + I(t)
-- y(t) = 1 si V(t) >= theta, 0 en caso contrario
+En forma compacta:
 
-Variables:
-- s_i(t): spike presinaptico (0/1)
-- w_i: peso sinaptico
-- I(t): entrada sinaptica total
-- V(t): potencial de membrana
-- theta: umbral de disparo
-- y(t): spike de salida
+- `acc_j = sum_{i=1..M} W(i,j) * s_i`.
+- `y_j = 1 si acc_j >= theta, 0 en caso contrario`.
+
+Como `s_i` es binario (0/1), la multiplicacion equivale a seleccionar o no el peso, tal como en el `if bitget(...)` del codigo.
 
 ### Enfoque de la prueba (MNIST)
 
