@@ -2,7 +2,7 @@
 
 Este README replica el contenido del reporte `snn_matlab.pdf` y sirve como tutorial para reproducir el flujo completo.
 
-## 1) Introduccion a las SNN
+## Introduccion a las SNN
 
 Las Spiking Neural Networks (SNN) procesan informacion mediante spikes (eventos discretos). Son asincronas y basadas en eventos, con computo solo cuando ocurre un spike.
 
@@ -23,21 +23,21 @@ Las Spiking Neural Networks (SNN) procesan informacion mediante spikes (eventos 
 - Audio/biosenales.
 - Sistemas embebidos de bajo consumo.
 
-## 2) Requisitos previos
+## Requisitos previos
 
 - MATLAB/Simulink con HDL Coder y HDL Verifier.
 - Soporte de placa objetivo.
 - Licencias activas.
 
-## 3) Flujo general
+## Flujo general
 
 1. Modelado y validacion en MATLAB/Simulink.
 2. Generacion HDL con HDL Coder.
 3. Verificacion con HDL Verifier (co-simulacion y FIL).
 
-## 4) Modelado de la SNN en MATLAB/Simulink
+## Modelado de la SNN en MATLAB/Simulink
 
-### 4.1 Modelo matematico (sin multiplicaciones)
+### Modelo matematico (sin multiplicaciones)
 
 Entrada sinaptica:
 
@@ -56,7 +56,7 @@ Variables:
 - theta: umbral de disparo
 - y(t): spike de salida
 
-### 4.2 Enfoque de la prueba (MNIST)
+### Enfoque de la prueba (MNIST)
 
 Arquitectura minima:
 - 784 neuronas de entrada (28x28)
@@ -64,7 +64,7 @@ Arquitectura minima:
 
 Objetivo: validar el flujo completo, no maximizar rendimiento.
 
-### 4.3 Entrenamiento en Python y artefactos
+### Entrenamiento en Python y artefactos
 
 Se entreno con codificacion de latencia (un solo paso temporal). Artefactos:
 - `fc1_full_weights.csv`
@@ -72,7 +72,7 @@ Se entreno con codificacion de latencia (un solo paso temporal). Artefactos:
 - `frames/`
 - etiquetas/salidas esperadas
 
-### 4.4 Implementacion de la SNN en MATLAB (`snn.m`)
+### Implementacion de la SNN en MATLAB (`snn.m`)
 
 ```matlab
 function spikes_out = snn(spikes_in)
@@ -108,7 +108,7 @@ function spikes_out = snn(spikes_in)
 end
 ```
 
-### 4.5 Parametros y pesos (`snn_params.m`)
+### Parametros y pesos (`snn_params.m`)
 
 ```matlab
 function params = snn_params()
@@ -143,11 +143,11 @@ function write_params_file(filename, tresh, beta)
 end
 ```
 
-### 4.6 Puertos vectoriales y empaquetado
+### Puertos vectoriales y empaquetado
 
 En FPGA-in-the-Loop, los puertos vectoriales (N x 1) no estan soportados y HDL Coder los scalariza (784 puertos si se usa vector). Para obtener un solo puerto de 784 bits se usa un escalar con word length 784 (ufix784). HDL Coder soporta word lengths grandes (hasta 65535 bits).
 
-### 4.7 Banco de pruebas MATLAB con entrada empaquetada
+### Banco de pruebas MATLAB con entrada empaquetada
 
 El banco de pruebas toma los frames de `spike_train.mem`, los empaqueta en `ufix784` y ejecuta la SNN frame a frame, respetando el mapeo MSB/LSB.
 
@@ -181,16 +181,16 @@ for f = 1:num_frames
 end
 ```
 
-## 5) Generacion de HDL con HDL Coder
+## Generacion de HDL con HDL Coder
 
-### 5.1 Flujo con Workflow Advisor
+### Flujo con Workflow Advisor
 
 - Cargar `snn.m` como DUT y testbench MATLAB.
 - Revisar compatibilidad.
 
 ![Carga DUT y testbench](images/workflow_1.png)
 
-### 5.2 Conversion a punto fijo
+### Conversion a punto fijo
 
 - Opcion: `Convert to fixed point`.
 - Type proposal: `Propose fraction lengths`.
@@ -204,13 +204,13 @@ El grafico muestra 1 frame distinto (float vs fixed). Para eliminarlo se aumenta
 
 ![Comparacion salidas](images/workflow_5_comparacion_salidas.png)
 
-### 5.3 Configuracion de generacion HDL
+### Configuracion de generacion HDL
 
 - Target por defecto.
 - Verilog recomendado (VHDL dio errores en pruebas).
 - Activar reportes.
 
-### 5.4 Optimizacion y uso de recursos
+### Optimizacion y uso de recursos
 
 En `Optimization` se usa `Stream Loop`:
 - `None` (unroll) crea recursos dedicados por iteracion.
@@ -228,7 +228,7 @@ La diferencia de recursos se explica por el reparto de hardware: con `Stream Loo
 ![Recursos con Stream Loop](images/workflow_7_recursos_usados_stream.png)
 ![Recursos sin Stream Loop](images/workflow_7_recursos_usados_sin_stream.png)
 
-### 5.5 Salida de generacion y logs
+### Salida de generacion y logs
 
 Mensajes clave:
 - Latencia fija de 1 ciclo.
@@ -266,9 +266,9 @@ Interpretacion:
 - El reloj interno debe ser 7840x.
 - En FIL se configura oversampling a 7840.
 
-## 6) Verificacion
+## Verificacion
 
-### 6.1 Co-simulacion (HDL Verifier)
+### Co-simulacion (HDL Verifier)
 
 Se comparan `snn_fixpt.v` y `snn_fixpt.m` con el mismo testbench.
 
@@ -282,14 +282,14 @@ hdlsetuptoolpath('ToolName','Xilinx Vivado','ToolPath','C:\Xilinx\Vivado\20xx.x\
 
 ![Resultado co-simulacion](images/workflow_8_cosimlation_output_Result.png)
 
-### 6.2 FPGA-in-the-Loop (FIL)
+### FPGA-in-the-Loop (FIL)
 
 Se activan todas las casillas. Flujo mas lento por sintesis e implementacion. Resultado igual a co-simulacion.
 
 ![Configuracion FIL](images/workflow_9_FIL.png)
 ![Resultado FIL](images/workflow_9_FIL_Result.png)
 
-### 6.3 Verificacion en Simulink
+### Verificacion en Simulink
 
 - Crear bloque con FIL Wizard.
 - Oversampling 7840.
@@ -308,7 +308,7 @@ Comparacion con retardo de 1 ciclo:
 ![Diagrama comparacion](images/workflow_10_FIL_cosim_diagram.png)
 ![Resultado comparado](images/workflow_10_FIL_cosim_result.png)
 
-### 6.4 Prueba con Computer Vision Toolbox (opcional)
+### Prueba con Computer Vision Toolbox (opcional)
 
 ```matlab
 function packed = image_to_packed_latency_ufix784(img, latency_threshold)
@@ -346,14 +346,14 @@ Prueba con frame 044 (digito 8): salida `0000000010` (bit 8 activo).
 
 ![Prueba con CVT](images/workflow_10_FIL_cosim_with_CVT.png)
 
-## 7) Resultados y conclusiones
+## Resultados y conclusiones
 
 Pendiente completar en el reporte:
 - Resumen de metricas clave.
 - Observaciones finales.
 - Trabajo futuro.
 
-## 8) Compilar el reporte
+## Compilar el reporte
 
 ```bash
 python compilar_latex.py
