@@ -20,9 +20,10 @@ El modulo `counter` recibe `clk`, `rst`, `start` e `inc`. Internamente implement
 divisores que generan pulsos a distintos periodos. Las salidas son contadores de 8 bits:
 
 - `cnt1`: incrementa cada ciclo con `start` activo.
-- `cnt10`: incrementa cada 10 ciclos.
-- `cnt17`: incrementa cada 17 ciclos.
-- `cnt25`: incrementa cada 25 ciclos y usa registros extra en la ruta.
+- `cnt10`: incrementa cada 10 ciclos; el divisor cuenta de 0 a 9 y genera el pulso.
+- `cnt17`: incrementa cada 17 ciclos; el divisor cuenta de 0 a 16 y genera el pulso.
+- `cnt25`: incrementa cada 25 ciclos; el divisor cuenta de 0 a 24 y el incremento usa registros
+  de entrada y salida, agregando dos flip-flops en la ruta.
 
 El proposito es observar como el OF interactua con las distintas frecuencias internas.
 
@@ -33,7 +34,8 @@ Se genera el bloque FIL con `FIL Wizard` usando `counter.v` y se integra en Simu
 ![Diagrama de prueba en Simulink para el bloque FIL del contador.](images/diagram_counter_simulink.png)
 
 El muestreo de entradas se fija en $T_s = 1\times 10^{-2}$ s. Se prueban varios valores de OF en un
-horizonte de 1 segundo.
+horizonte de 1 segundo. En particular se comparan `OF = 1`, `OF = 10` y `OF = 17`, junto con un
+caso adicional para contrastar el comportamiento.
 
 ## Resultados
 
@@ -54,6 +56,11 @@ Resumen en 1 segundo:
 
 ## Conclusiones
 
-El OF debe elegirse segun la frecuencia interna del modulo observado.
-Si el diseno no limita su acumulacion interna, un OF alto produce valores observados mayores a los esperados.
-Tambien aparece una cuantizacion temporal cuando la salida del FPGA se actualiza a un ritmo distinto al muestreo de Simulink.
+El OF debe elegirse segun la frecuencia interna del modulo observado. Para este contador, el valor que
+mejor reproduce un incremento de 100 en 1 segundo es el que coincide con la frecuencia de conteo del canal.
+Si el diseno no limita su acumulacion interna, un OF alto produce valores observados mayores a los esperados,
+como ocurre con `cnt1` y `cnt10` cuando se usa `OF = 17`.
+
+Tambien aparece una cuantizacion temporal cuando la salida del FPGA se actualiza a un ritmo distinto al muestreo
+de Simulink. Por ejemplo, con `OF = 10`, el contador de 17 ciclos se actualiza mas lento que el muestreo y se ven
+saltos visibles, con un valor final inferior a 100.

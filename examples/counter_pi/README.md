@@ -20,13 +20,19 @@ La respuesta base sigue la referencia con el muestreo esperado.
 | ![Diagrama base del PI](images/diagram_PI_matlab_function_simulink.png) | ![Respuesta del PI base](images/scope_PI_mat_function_simulink.png) |
 
 En este ejemplo, las entradas estan discretizadas a $6.5\times 10^{-6}$ s.
-El bloque PLECS es continuo, por lo que se usa un `Zero-Order Hold` para enlazar con el bloque FIL discreto.
-La salida de la FPGA y la entrada de PLECS tienen distinto ancho de palabra, asi que se usa un `Data Type Conversion` a `int8`.
+Al estar todas las entradas discretizadas se puede usar el solver en modo automatico pero con `variable step`,
+porque PLECS no permite `discrete`. El bloque PLECS es continuo, por lo que se usa un `Zero-Order Hold` para
+enlazar con el bloque FIL discreto. La salida de la FPGA y la entrada de PLECS tienen distinto ancho de palabra,
+asi que se usa un `Data Type Conversion` a `int8`.
 
 ## Bloque FIL y configuracion de overclocking
 
 El controlador se sintetiza con Vitis y se genera el bloque FIL con `FIL Wizard`.
-El HDL generado requiere 11 ciclos internos para producir una salida valida, por lo que se espera un OF de 11.
+El HDL generado incluye senales de control; en este caso no se usan, pero se recomiendan para un diseno mas seguro.
+Por ejemplo, con el overclocking por defecto de 1, la senal `D1_ap_vld` indica que `D1` esta lista con una
+frecuencia de $7.15\times 10^{-5}$ s, que es 11 veces la frecuencia de entrada $6.5\times 10^{-6}$ s. De aqui se
+infiere que se necesita un overclocking de 11, porque se requieren 11 ciclos internos para obtener una salida
+por cada $6.5\times 10^{-6}$ s, que es el ritmo para el cual fue disenado el controlador.
 El diagrama de simulacion con FIL es:
 
 ![Diagrama de simulacion con el bloque FIL del PI.](images/diagram_PI_FI_simulink.png)
