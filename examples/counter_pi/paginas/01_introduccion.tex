@@ -1,0 +1,10 @@
+El objetivo de este informe es documentar la verificación de un módulo Verilog sencillo mediante la herramienta FPGA-in-the-Loop (FIL). El caso de estudio es un contador con tres salidas que incrementan a ritmos distintos y una entrada \texttt{start} que habilita el conteo. Se utiliza este diseño para analizar cómo el factor de overclocking del bloque FIL afecta el muestreo de entradas y la lectura de salidas en Simulink.
+
+\section{Rol del overclocking en FIL}
+El overclocking factor (OF) se define como la razón entre la frecuencia de reloj del FPGA y la frecuencia de muestreo de Simulink. En términos de periodo de muestreo de Simulink $T_s$, la relación se expresa como:
+\[
+f_{FPGA} = \frac{OF}{T_s}
+\qquad \text{y} \qquad
+T_{FPGA} = \frac{T_s}{OF}
+\]
+Esto significa que el FPGA muestrea las entradas \texttt{OF} veces por cada paso de tiempo de Simulink. Por lo tanto, en cada paso de Simulink se observa una salida que ya acumuló \texttt{OF} ciclos internos del FPGA.

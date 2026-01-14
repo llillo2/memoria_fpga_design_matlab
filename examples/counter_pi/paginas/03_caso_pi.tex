@@ -1,0 +1,60 @@
+Para ilustrar un caso más cercano a una aplicación real, se analiza un controlador PI donde la parte integral acumula el error. En este tipo de sistemas, un sobremuestreo o un muestreo insuficiente altera el desempeño esperado del control.
+
+Se parte de un modelo base en Simulink con una función MATLAB que implementa el PI. La Figura \ref{fig:pi_model_base} muestra un ejemplo de control PI en un lazo cerrado; se aprecia en la respuesta que el voltaje de salida sigue la referencia. Se presenta el diagrama y el resultado asociado en un mismo plano para facilitar la comparación.
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[t]{0.48\textwidth}
+    \centering
+    \maybeimage{images/diagram_PI_matlab_function_simulink.png}{1.0}
+    \caption*{Diagrama base del PI}
+  \end{minipage}
+  \begin{minipage}[t]{0.48\textwidth}
+    \centering
+    \maybeimage{images/scope_PI_mat_function_simulink.png}{1.0}
+    \caption*{Respuesta del PI base}
+  \end{minipage}
+  \caption{Modelo PI base y su respuesta de referencia.}
+  \label{fig:pi_model_base}
+\end{figure}
+
+En este ejemplo, las entradas están discretizadas a $6.5\times 10^{-6}$ s y se espera una salida bajo esta misma frecuencia. Al estar todas las entradas discretizadas se puede usar un solver en modo automático pero en \textit{variable step}, dado que PLECS no permite \textit{discrete}. Además, como el bloque PLECS es continuo, se incorpora un bloque \texttt{Zero-Order Hold} para conectar el bloque FIL, que es discreto, con el dominio continuo de PLECS. La salida de la FPGA y la entrada de PLECS tienen distinto ancho de palabra, por lo que se utiliza un bloque de conversión a \texttt{int8}.
+
+El controlador se sintetiza en HDL usando Vitis y, posteriormente, se genera el bloque FIL con \texttt{FIL Wizard}. El HDL generado por Vitis incluye señales de control; en este caso no se usan, pero son recomendables para un diseño más seguro. Por ejemplo, si se usa el overclocking por defecto de 1, la señal \texttt{D1\_ap\_vld} indica que \texttt{D1} está lista con una frecuencia de $7.15\times 10^{-5}$ s, que es 11 veces la frecuencia de entrada $6.5\times 10^{-6}$ s. De aquí también se infiere que se necesita un overclocking de 11, dado que se requieren 11 ciclos internos para obtener una salida cada $6.5\times 10^{-6}$ s, que es el ritmo para el cual fue diseñado el controlador. La Figura \ref{fig:pi_fil_diagram} muestra el diagrama de simulación con FIL.
+
+\begin{figure}[H]
+  \centering
+  \maybeimage{images/diagram_PI_FI_simulink.png}{0.85}
+  \caption{Diagrama de simulación con el bloque FIL del PI.}
+  \label{fig:pi_fil_diagram}
+\end{figure}
+
+Se evalúan tres factores de overclocking: \texttt{OF = 1} (valor por defecto), \texttt{OF = 11} (ciclos internos requeridos por salida) y \texttt{OF = 75} (caso de sobremuestreo). Los resultados se muestran en la Figura \ref{fig:pi_fil_scopes}.
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[t]{0.32\textwidth}
+    \centering
+    \maybeimage{images/scope_PI_FIL_simulink_overfactor1.png}{1.0}
+    \caption*{OF = 1}
+  \end{minipage}
+  \begin{minipage}[t]{0.32\textwidth}
+    \centering
+    \maybeimage{images/scope_PI_FIL_simulink_overfactor11.png}{1.0}
+    \caption*{OF = 11}
+  \end{minipage}
+  \begin{minipage}[t]{0.32\textwidth}
+    \centering
+    \maybeimage{images/scope_PI_FIL_simulink_overfactor75.png}{1.0}
+    \caption*{OF = 75}
+  \end{minipage}
+  \caption{Respuesta del controlador PI para distintos factores de overclocking.}
+  \label{fig:pi_fil_scopes}
+\end{figure}
+
+Los resultados por factor de overclocking son:
+\begin{itemize}
+  \item \texttt{OF = 1}: el controlador no logra el desempeño esperado porque el diseño requiere 11 ciclos internos para producir una salida válida.
+  \item \texttt{OF = 11}: la respuesta coincide con la referencia al respetar los ciclos internos requeridos.
+  \item \texttt{OF = 75}: se evidencia sobremuestreo, con sobreimpulsos más pronunciados y mayor tiempo de estabilización.
+\end{itemize}
