@@ -22,8 +22,7 @@ divisores que generan pulsos a distintos periodos. Las salidas son contadores de
 - `cnt1`: incrementa cada ciclo con `start` activo.
 - `cnt10`: incrementa cada 10 ciclos; el divisor cuenta de 0 a 9 y genera el pulso.
 - `cnt17`: incrementa cada 17 ciclos; el divisor cuenta de 0 a 16 y genera el pulso.
-- `cnt25`: incrementa cada 25 ciclos; el divisor cuenta de 0 a 24 y el incremento usa registros
-  de entrada y salida, agregando dos flip-flops en la ruta.
+
 
 El proposito es observar como el OF interactua con las distintas frecuencias internas.
 
@@ -49,7 +48,7 @@ Comparacion de salidas para distintos factores de overclocking:
 | --- | --- | --- |
 | ![OF=1](images/scope_overfactor1.png) | ![OF=10](images/scope_overfactor10.png) | ![OF=17](images/scope_overfactor17.png) |
 
-Resumen en 1 segundo:
+Resumen despues de simular 1 segundo:
 - `OF = 1`: `cnt1` llega a 100; `cnt10` y `cnt17` quedan por debajo.
 - `OF = 10`: `cnt10` llega a 100; `cnt1` supera 100; `cnt17` no llega.
 - `OF = 17`: `cnt17` llega a 100; `cnt1` y `cnt10` superan 100.
@@ -61,6 +60,8 @@ mejor reproduce un incremento de 100 en 1 segundo es el que coincide con la frec
 Si el diseno no limita su acumulacion interna, un OF alto produce valores observados mayores a los esperados,
 como ocurre con `cnt1` y `cnt10` cuando se usa `OF = 17`.
 
-Tambien aparece una cuantizacion temporal cuando la salida del FPGA se actualiza a un ritmo distinto al muestreo
-de Simulink. Por ejemplo, con `OF = 10`, el contador de 17 ciclos se actualiza mas lento que el muestreo y se ven
-saltos visibles, con un valor final inferior a 100.
+En este ejemplo, el muestreo de entrada se fijo en $1\times 10^{-2}$ s, y la salida solo presenta esa
+frecuencia cuando el overclocking coincide con la cantidad de ciclos internos requeridos. Esto permite
+inferir el overclocking necesario si no se conoce de antemano: se ingresa una senal cuya salida cambie
+en el tiempo, se observa cada cuanto cambia la salida y ese periodo se divide por el muestreo de entrada
+para estimar el valor requerido.
