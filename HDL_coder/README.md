@@ -166,7 +166,7 @@ Con esto se puede ejecutar **Run** y generar HDL. Esto produce una salida en la 
  ### To rerun codegen evaluate the following commands...
 
 ---------------------
-cgi    = load('C:\Users\llillo\Desktop\cosas_ordenadas\uni\memoria\git\memoria_fpga_design_matlab\examples\Producto_punto\codegen\producto_punto\hdlsrc\codegen_info.mat');
+cgi    = load('examples\Producto_punto\codegen\producto_punto\hdlsrc\codegen_info.mat');
 cfg    = cgi.CodeGenInfo.codegenSettings;
 fxpCfg = cgi.CodeGenInfo.fxpCfg;
 codegen -float2fixed fxpCfg -config cfg -report
@@ -203,7 +203,7 @@ A continuación se repite la generación de HDL, pero desactivando **Stream loop
 ### To rerun codegen evaluate the following commands...
 
 ---------------------
-cgi    = load('C:\Users\llillo\Desktop\cosas_ordenadas\uni\memoria\git\memoria_fpga_design_matlab\examples\Producto_punto\codegen\producto_punto\hdlsrc\codegen_info.mat');
+cgi    = load('C:\examples\Producto_punto\codegen\producto_punto\hdlsrc\codegen_info.mat');
 cfg    = cgi.CodeGenInfo.codegenSettings;
 fxpCfg = cgi.CodeGenInfo.fxpCfg;
 codegen -float2fixed fxpCfg -config cfg -report
@@ -258,7 +258,7 @@ Ejecutando la generación de HDL en punto flotante con **Stream loops** activado
 ### To rerun codegen evaluate the following commands...
 
 ---------------------
-cgi    = load('C:\Users\llillo\Desktop\cosas_ordenadas\uni\memoria\git\memoria_fpga_design_matlab\examples\Producto_punto\codegen\producto_punto\hdlsrc\codegen_info.mat');
+cgi    = load('C:\examples\Producto_punto\codegen\producto_punto\hdlsrc\codegen_info.mat');
 inVals = cgi.CodeGenInfo.inVals;
 cfg    = cgi.CodeGenInfo.codegenSettings;
 codegen -config cfg -args inVals -report
