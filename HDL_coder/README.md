@@ -187,3 +187,93 @@ Finalmente, el reporte de recursos puede verse, por ejemplo:
 ![Resource report](images/HDL_workflow_code_generation3.png)
 
 Aquí se observa que se utilizó un solo multiplicador, a pesar de que un producto punto de vectores 3x1 requiere 3 multiplicaciones. El conteo de sumadores, registros y multiplexores suele ser más difícil de analizar, ya que la conversión a HDL agrega lógica adicional para control y temporización.
+
+### Generación sin Stream loops
+
+A continuación se repite la generación de HDL, pero desactivando **Stream loops**:
+
+```
+### Begin MATLAB to HDL Code Generation...
+### Working on DUT: producto_punto_fixpt.
+### Using TestBench: test.
+### Begin Verilog Code Generation
+### Working on producto_punto_fixpt as producto_punto_fixpt.v.
+### Generating Resource Utilization Report resource_report.html.
+### Generating Optimization report  
+### To rerun codegen evaluate the following commands...
+
+---------------------
+cgi    = load('C:\Users\llillo\Desktop\cosas_ordenadas\uni\memoria\git\memoria_fpga_design_matlab\examples\Producto_punto\codegen\producto_punto\hdlsrc\codegen_info.mat');
+cfg    = cgi.CodeGenInfo.codegenSettings;
+fxpCfg = cgi.CodeGenInfo.fxpCfg;
+codegen -float2fixed fxpCfg -config cfg -report
+---------------------
+
+### Generating HDL Conformance Report producto_punto_fixpt_hdl_conformance_report.html.
+### HDL Conformance check complete with 0 errors, 0 warnings, and 0 messages.
+ ### Code generation successful: View report
+### Elapsed Time: '            5.1107' sec(s)
+```
+
+Ahora no aparecen los mensajes `Output port 1: 1 cycles` ni `MESSAGE: The design requires 3 times faster clock with respect to the base rate = 1`. Esto se debe a que, al no aplicar optimizaciones, se genera un HDL puramente combinacional sin requerir reloj. Usualmente esto consume más recursos pero es más rápido. En este ejemplo, la diferencia de utilización es pequeña porque el diseño es muy reducido.
+
+Si en lugar de 3 iteraciones se tuvieran 10.000 o 100.000 (como es común en casos reales), sería necesario compartir recursos; de lo contrario el diseño no cabría en una FPGA.
+
+### Generación en punto flotante
+
+Se repite el proceso para punto flotante. En el **HDL Workflow Advisor**, en lugar de **Convert to fixed-point at build time** se selecciona **Keep original types**, lo que salta la etapa de fixed-point:
+
+![Floating point setup](images/HDL_workflow_code_generation5.png)
+
+Luego se activan estas opciones de configuración para la generación de HDL, en el siguiente orden:
+
+1) En **Optimization**, habilitar **Aggressive Dataflow Conversion**:
+
+![Aggressive dataflow](images/HDL_workflow_code_generation6.png)
+
+2) En **Advanced**, establecer **None** en **Check for presence of reals in the generated code**:
+
+![Advanced](images/HDL_workflow_code_generation7.png)
+
+3) En **Floating Point**, activar **Use floating point** y seleccionar **NativeFloatingPoint**:
+
+![Floating point](images/HDL_workflow_code_generation8.png)
+
+Ejecutando la generación de HDL en punto flotante con **Stream loops** activado, se obtiene la siguiente salida:
+
+```
+### Begin MATLAB to HDL Code Generation...
+### Working on DUT: producto_punto.
+### Using TestBench: test.
+### The DUT requires an initial pipeline setup latency. Each output port experiences these additional delays.
+### Output port 1: 26 cycles.
+ ### MESSAGE: The design requires 3 times faster clock with respect to the base rate = 1.
+### Working on producto_punto_tc as producto_punto_tc.v.
+### Begin Verilog Code Generation
+### Working on producto_punto/nfp_mul_double as nfp_mul_double.v.
+### Working on producto_punto/nfp_add_double as nfp_add_double.v.
+### Working on producto_punto as producto_punto.v.
+### Generating Resource Utilization Report resource_report.html.
+### Generating Optimization report  
+### To rerun codegen evaluate the following commands...
+
+---------------------
+cgi    = load('C:\Users\llillo\Desktop\cosas_ordenadas\uni\memoria\git\memoria_fpga_design_matlab\examples\Producto_punto\codegen\producto_punto\hdlsrc\codegen_info.mat');
+inVals = cgi.CodeGenInfo.inVals;
+cfg    = cgi.CodeGenInfo.codegenSettings;
+codegen -config cfg -args inVals -report
+---------------------
+
+### Generating HDL Conformance Report producto_punto_hdl_conformance_report.html.
+### HDL Conformance check complete with 0 errors, 0 warnings, and 1 messages.
+ ### Code generation successful: View report
+### Elapsed Time: '         14.5892' sec(s)
+```
+
+El mensaje `Output port 1: 26 cycles` indica que, si la frecuencia de entrada de datos es de 1 ms, la salida estará lista en 26 ms. Durante ese tiempo pueden seguir entrando nuevos datos, por lo que el throughput se mantiene pero la latencia de salida aumenta.
+
+Si se revisan los recursos utilizados:
+
+![Resource report floating point](images/HDL_workflow_code_generation9.png)
+
+Se observa que, aunque se mantiene un solo multiplicador, el resto de recursos aumenta de forma considerable respecto de la versión fixed-point. Para este ejemplo sigue siendo totalmente factible por su tamaño reducido.
