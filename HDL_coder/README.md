@@ -318,3 +318,396 @@ Al igual que en cosimulación, no se observa error para los datos usados como mu
 Con el flujo completado, se puede ir a `codegen/nameproyect/hdlsrc` y utilizar los archivos `.v` (o el lenguaje seleccionado). También es posible continuar en Simulink con **FIL Wizard** para probar nuevos valores de forma más sencilla y visual: TODO linkear.
 
 Para finalizar, se realizará una comparación entre la salida del test de MATLAB y la salida de la FPGA ya cargada con el bitstream del HDL. Esta etapa requiere tener configurada la conexión con la FPGA; una guía se explica en este documento: TODO adjuntar el link.
+
+## Ejemplo MPC (caso complejo)
+
+El ejemplo anterior ocurrió sin inconvenientes. A continuación se muestra un caso más complejo basado en MPC, donde los cálculos matriciales y la cantidad de iteraciones son elevados. Esto hace que, si no se optimiza, el uso de recursos sea excesivo. Desde este punto no se detalla el Workflow Advisor, ya que se explicó en el ejemplo anterior.
+
+Para este MPC se tienen dos funciones y un test:
+
+```matlab
+%% QP SOLVER - ADMM
+% ===============================================================================
+% Alfonso Cortes Neira - Universidad Técnica Federico Santa María
+% 16-02-2023
+% Based on the work by Juan David Escárate
+% ===============================================================================
+
+function [t] = fx_qp_admm(q, g, iters)
+% fx_qp_admm - Solución de un problema de optimización cuadrática con ADMM
+N_SYS = 2;
+M_SYS = 1;
+N_HOR = 4;
+
+N_QP = N_HOR * M_SYS;
+M_QP = 2 * N_HOR * (N_SYS + M_SYS);
+
+G = [1 0 0 0;0 1 0 0;0 0 1 0;0 0 0 1;-1 0 0 0;0 -1 0 0;0 0 -1 0;0 0 0 -1;0.0385394841 0 0 0;1.93594096e-05 0 0 0;0.0374783464 0.0385394841 0 0;5.73658581e-05 1.93594096e-05 0 0;0.0364464223 0.0374783464 0.0385394841 0;9.43258419e-05 5.73658581e-05 1.93594096e-05 0;0.0354429111 0.0364464223 0.0374783464 0.0385394841;0.000130268178 9.43258419e-05 5.73658581e-05 1.93594096e-05;-0.0385394841 0 0 0;-1.93594096e-05 0 0 0;-0.0374783464 -0.0385394841 0 0;-5.73658581e-05 -1.93594096e-05 0 0;-0.0364464223 -0.0374783464 -0.0385394841 0;-9.43258419e-05 -5.73658581e-05 -1.93594096e-05 0;-0.0354429111 -0.0364464223 -0.0374783464 -0.0385394841;-0.000130268178 -9.43258419e-05 -5.73658581e-05 -1.93594096e-05];
+
+R_inv = [2.47927713 -0.0101672383 -0.00845972542 -0.00676105311;-0.0101672392 2.48085499 -0.00855126418 -0.00680351257;-0.00845972635 -0.00855126418 2.48251104 -0.00685224542;-0.00676105265 -0.00680351257 -0.00685224542 2.48425579];
+
+P = [-0.100709476 0 0 0 0.100709476 0 0 0 -0.00388129125 -1.94967606e-06 -0.00377442455 -5.77728542e-06 -0.00367050013 -9.49950572e-06 -0.00356943696 -1.31192401e-05 0.00388129125 1.94967606e-06 0.00377442455 5.77728542e-06 0.00367050013 9.49950572e-06 0.00356943696 1.31192401e-05;0 -0.100709476 0 0 0 0.100709476 0 0 0 0 -0.00388129125 -1.94967606e-06 -0.00377442455 -5.77728542e-06 -0.00367050013 -9.49950572e-06 0 0 0.00388129125 1.94967606e-06 0.00377442455 5.77728542e-06 0.00367050013 9.49950572e-06;0 0 -0.100709476 0 0 0 0.100709476 0 0 0 0 0 -0.00388129125 -1.94967606e-06 -0.00377442455 -5.77728542e-06 0 0 0 0 0.00388129125 1.94967606e-06 0.00377442455 5.77728542e-06;0 0 0 -0.100709476 0 0 0 0.100709476 0 0 0 0 0 0 -0.00388129125 -1.94967606e-06 0 0 0 0 0 0 0.00388129125 1.94967606e-06];
+
+    persistent tk zk uk
+
+    if isempty(tk)
+        tk = zeros(N_QP, 1, 'single');
+        zk = zeros(M_QP, 1, 'single');
+        uk = zeros(M_QP, 1, 'single');
+    end
+    
+    % Iteraciones de ADMM
+    for k = 1:iters
+        v_x = zk - g + uk;
+        tk = R_inv * (P * v_x - q);  % Actualizar tk
+        zk = max(0, -G * tk - uk + g);       % Actualizar zk
+        uk = uk + (G * tk + zk - g);
+    end
+    t=tk;
+end
+
+function uk = mpc(xk, rk, IT_ADMM)
+
+N_HOR = 4;      % Tamaño del horizonte de predicción
+umin = -3;
+umax = 3;
+xmin = [-5; -2];
+xmax = [5; 2];
+
+%% Formulación Densa
+N_SYS = 2;
+M_SYS = 1;
+
+D = [0.972466171 0;0.000986168976 1;0.945690453 0;0.00194518501 1;0.919651926 0;0.0028777956 1;0.894330382 0;0.00378472777 1];
+F = [0.0214235317 0.0213781651 0.0213316325 0.0212839693;0.64161247 0.638990045 0.636372685 0.633760333];
+T_inv = [-0.502326608 1000 0;0 0 1;25.5885372 714.431946 0];
+
+ref = [zeros(N_SYS,1,'single'); rk];
+inf = T_inv * ref;
+xinf = inf(1:N_SYS);
+uinf = inf(N_SYS+1 : N_SYS+M_SYS);
+q = ((xk - xinf)' * F)';
+c = repmat(umax - uinf, N_HOR, 1);
+d = repmat(umin - uinf, N_HOR, 1);
+e = repmat(xmax - xinf, N_HOR, 1);
+f = repmat(xmin - xinf, N_HOR, 1);
+g = [c; -d; e - D * xk; D * xk - f];
+
+t_ADMM = fx_qp_admm(q, g, IT_ADMM);
+uk = t_ADMM(1:M_SYS) + uinf;
+
+end
+```
+
+Test utilizado:
+
+```matlab
+%% MPC for DC-DC motor, dense formulation
+% ===============================================================================
+% Francisca Donoso Bastias - Universidad Técnica Federico Santa María
+% 22-12-2025
+% Based on the work by Andrew Morrison and Alfonso Cortes
+% https://github.com/morrisort/embeddedMPC/
+% ===============================================================================
+clc; clear;
+
+%% Parámetros del sistema
+
+format('longE')
+
+N_HOR = 4;      % Tamaño del horizonte de predicción
+
+% Arreglo de tiempo
+Ts = 0.001;         % Periodo de muestreo en segundos
+tsimu = 3;          % Tiempo de simulación en segundos
+k = 0:Ts:tsimu-Ts;
+
+% Datos del servomotor en tiempo discreto
+kappa = 39.08/27.92;
+tau = 1/27.92;
+A = [exp(-Ts/tau), 0; tau*(1-exp(-Ts/tau)), 1];
+B = [kappa*(1-exp(-Ts/tau)); Ts*kappa + tau*kappa*(exp(-Ts/tau) - 1)];
+C = [0, 1];
+x0 = single([3.0; -1.0]);    % Velocidad y posición angular inicial
+
+% Restricciones del sistema
+%umin = single(-3);
+%umax = single(3);
+%xmin = single([-5; -2]);
+%xmax = single([5; 2]);
+
+Gamma = 0.1;
+Omega = C' * C;
+[Linf, OmegaN, ~] = dlqr(A, B, Omega, Gamma);
+
+% Referencia deseada del sistema
+rk = zeros(1, length(k));
+rk(1, 1:1500) = rk(1, 1:1500) + 1;
+
+IT_ADMM = 10;
+
+%% Formulación Densa
+
+N_SYS = 2;
+M_SYS = 1;
+
+N_QP = N_HOR * M_SYS;
+M_QP = 2 * N_HOR * (N_SYS + M_SYS);
+xk = zeros(N_SYS, length(k), 'single');
+uk = zeros(M_SYS, length(k), 'single');
+xk(:, 1) = x0;
+
+%% Iteración MPC
+
+for i = 1:length(k)
+    uk_ = mpc(xk(:, i),rk(:,i), IT_ADMM);
+ 
+    uk(:, i) = uk_;
+    xk(:, i + 1) = A * xk(:, i) + B * uk(:, i);
+end
+
+%% Graficar resultados
+
+figure
+plot(rk(1, :))
+hold on
+plot(xk(1, :))
+plot(xk(2, :))
+plot(uk(1, :))
+grid on
+legend('Referencia r', 'Estado x0', 'Estado x1', 'Entrada u')
+```
+
+Este diseño no contiene funciones incompatibles con HDL Coder, pero su forma de descripción dificulta la optimización y puede generar un HDL no óptimo, con errores o excesivo uso de recursos.
+
+Se replica el procedimiento del Workflow Advisor con la misma configuración del ejemplo anterior, sin usar optimización de **Stream loops**. Una vez generado el HDL, se observan los siguientes recursos:
+
+![Recursos MPC sin optimización](images/HDL_mpc1.png)
+
+La utilización es muy alta. Aunque la cosimulación puede completarse sin errores, al intentar llevarlo a FPGA la herramienta intenta ajustar toda la lógica y termina fallando por tamaño. Por ello es importante estimar el uso de recursos antes de continuar. En este caso, ~4000 multiplicadores es demasiado para la FPGA utilizada.
+
+Se vuelve a la configuración de generación HDL y se activa **Stream loops**:
+
+![Recursos MPC con Stream loops](images/HDL_mpc2.png)
+
+Se observa incluso mayor uso de recursos. Esto se debe a que la forma de escribir el código no facilita la optimización. Por ello se modificará el archivo `.m` sin cambiar su funcionalidad, empezando por `fx_qp_admm`.
+
+Se detectan los siguientes problemas:
+- Se usa `persistent`, lo que dificulta el uso de recursos compartidos.
+- Se usa una variable como cantidad de iteraciones.
+- Se usan muchas multiplicaciones en operaciones matriciales; si la herramienta no logra compartir recursos, debe hacerse manualmente.
+
+Se propone la siguiente versión de `fx_qp_admm`:
+
+```matlab
+%% QP SOLVER - ADMM
+% ===============================================================================
+% Alfonso Cortes Neira - Universidad Técnica Federico Santa María
+% 16-02-2023
+% Based on the work by Juan David Escárate
+% ===============================================================================
+function [t] = fx_qp_admm(q, g, iters)
+% fx_qp_admm - Solución de un problema de optimización cuadrática con ADMM
+
+    N_SYS = 2;
+    M_SYS = 1;
+    N_HOR = 4;
+
+    N_QP = N_HOR * M_SYS;                 % 4
+    M_QP = 2 * N_HOR * (N_SYS + M_SYS);   % 24
+    G = single([ 1 0 0 0;
+                 0 1 0 0;
+                 0 0 1 0;
+                 0 0 0 1;
+                -1 0 0 0;
+                 0 -1 0 0;
+                 0 0 -1 0;
+                 0 0 0 -1;
+                 0.0385394841 0 0 0;
+                 1.93594096e-05 0 0 0;
+                 0.0374783464 0.0385394841 0 0;
+                 5.73658581e-05 1.93594096e-05 0 0;
+                 0.0364464223 0.0374783464 0.0385394841 0;
+                 9.43258419e-05 5.73658581e-05 1.93594096e-05 0;
+                 0.0354429111 0.0364464223 0.0374783464 0.0385394841;
+                 0.000130268178 9.43258419e-05 5.73658581e-05 1.93594096e-05;
+                -0.0385394841 0 0 0;
+                -1.93594096e-05 0 0 0;
+                -0.0374783464 -0.0385394841 0 0;
+                -5.73658581e-05 -1.93594096e-05 0 0;
+                -0.0364464223 -0.0374783464 -0.0385394841 0;
+                -9.43258419e-05 -5.73658581e-05 -1.93594096e-05 0;
+                -0.0354429111 -0.0364464223 -0.0374783464 -0.0385394841;
+                -0.000130268178 -9.43258419e-05 -5.73658581e-05 -1.93594096e-05 ]);
+
+    R_inv = single([ 2.47927713   -0.0101672383 -0.00845972542 -0.00676105311;
+                    -0.0101672392  2.48085499   -0.00855126418 -0.00680351257;
+                    -0.00845972635 -0.00855126418 2.48251104   -0.00685224542;
+                    -0.00676105265 -0.00680351257 -0.00685224542 2.48425579 ]);
+
+    P = single([ -0.100709476 0 0 0 0.100709476 0 0 0 -0.00388129125 -1.94967606e-06 -0.00377442455 -5.77728542e-06 -0.00367050013 -9.49950572e-06 -0.00356943696 -1.31192401e-05 0.00388129125 1.94967606e-06 0.00377442455 5.77728542e-06 0.00367050013 9.49950572e-06 0.00356943696 1.31192401e-05;
+                  0 -0.100709476 0 0 0 0.100709476 0 0 0 0 -0.00388129125 -1.94967606e-06 -0.00377442455 -5.77728542e-06 -0.00367050013 -9.49950572e-06 0 0 0.00388129125 1.94967606e-06 0.00377442455 5.77728542e-06 0.00367050013 9.49950572e-06;
+                  0 0 -0.100709476 0 0 0 0.100709476 0 0 0 0 0 -0.00388129125 -1.94967606e-06 -0.00377442455 -5.77728542e-06 0 0 0 0 0.00388129125 1.94967606e-06 0.00377442455 5.77728542e-06;
+                  0 0 0 -0.100709476 0 0 0 0.100709476 0 0 0 0 0 0 -0.00388129125 -1.94967606e-06 0 0 0 0 0 0 0.00388129125 1.94967606e-06 ]);
+
+    q = single(q);   % 4x1
+    g = single(g);   % 24x1
+
+    % se declaran solo como matrices de 0 las variables que conservar un valor para la iteracion siguiente
+    % sin el uso de persistent
+
+    tk = zeros(N_QP, 1, 'single');  % 4x1
+    zk = zeros(M_QP, 1, 'single');  % 24x1
+    uk = zeros(M_QP, 1, 'single');  % 24x1
+
+    v_x = zeros(M_QP, 1, 'single'); % 24x1
+    y   = zeros(N_QP, 1, 'single'); % 4x1  (P*v_x - q)
+    w   = zeros(M_QP, 1, 'single'); % 24x1 (G*tk)
+
+    % Matlab no recomienda que una iteracion del for sea una entrada o una variable al
+    % convertir a HDL, la cantidad de recursos aumenta y la precicion
+    % interna disminuye, por ello se toma un valor maximo que puede tomar
+    % las iteraciones, para que se genere un hardware mas preciso
+
+    MAX_ITERS = coder.const(100);  % limite fijo para el hardware
+
+    % Saturar iters al rango [0, MAX_ITERS]
+    if iters < 0
+        iters_eff = int32(0);
+    elseif iters > MAX_ITERS
+        iters_eff = int32(MAX_ITERS);
+    else
+        iters_eff = int32(iters);
+    end
+
+    % Bucle exterior con limite fijo y streaming
+    coder.hdl.loopspec('stream', MAX_ITERS);
+    
+    for k = 1:MAX_ITERS
+        % Solo hacemos el cuerpo del bucle si no hemos superado iters_eff
+        if k <= iters_eff
+
+            % ------------------------------------------------------------
+            % v_x = zk - g + uk   (24 iteraciones)
+            coder.hdl.loopspec('stream',24);
+            for i = 1:24
+                v_x(i) = zk(i) - g(i) + uk(i);
+            end
+
+            % ------------------------------------------------------------
+            % y = P*v_x - q
+            % P*v_x: (4x24)*(24x1) -> 4x1
+            coder.hdl.loopspec('stream',4);
+            for r = 1:4
+                acc = single(0);
+                coder.hdl.loopspec('stream',24);
+                for c = 1:24
+                    acc = acc + P(r,c) * v_x(c);
+                end
+                y(r) = acc - q(r);
+            end
+
+            % ------------------------------------------------------------
+            % tk = R_inv * y   (4x4)*(4x1) -> 4x1
+            coder.hdl.loopspec('stream',4);
+            for r = 1:4
+                acc = single(0);
+                coder.hdl.loopspec('stream',4);
+                for c = 1:4
+                    acc = acc + R_inv(r,c) * y(c);
+                end
+                tk(r) = acc;
+            end
+
+            % ------------------------------------------------------------
+            % w = G*tk   (24x4)*(4x1) -> 24x1
+            coder.hdl.loopspec('stream',24);
+            for r = 1:24
+                acc = single(0);
+                coder.hdl.loopspec('stream',4);
+                for c = 1:4
+                    acc = acc + G(r,c) * tk(c);
+                end
+                w(r) = acc;
+            end
+
+            % ------------------------------------------------------------
+            % zk = max(0, -w - uk + g)  (24 iteraciones)
+            coder.hdl.loopspec('stream',24);
+            for i = 1:24
+                ztmp = -w(i) - uk(i) + g(i);
+                if ztmp < 0
+                    zk(i) = single(0);
+                else
+                    zk(i) = ztmp;
+                end
+            end
+
+            % ------------------------------------------------------------
+            % uk = uk + (w + zk - g)    (24 iteraciones)
+            coder.hdl.loopspec('stream',24);
+            for i = 1:24
+                uk(i) = uk(i) + (w(i) + zk(i) - g(i));
+            end
+
+        end % if k <= iters_eff
+
+    end % for k = 1:MAX_ITERS
+
+    t = tk;
+end
+```
+
+TODO este cambio es muy brusco buscar la manera de hacerlo mas ameno
+
+Se realizaron los siguientes cambios:
+
+En el `for` de iteraciones ahora se usa un maximo fijo:
+
+```matlab
+MAX_ITERS = coder.const(100);  % limite fijo para el hardware
+
+% Saturar iters al rango [0, MAX_ITERS]
+if iters < 0
+    iters_eff = int32(0);
+elseif iters > MAX_ITERS
+    iters_eff = int32(MAX_ITERS);
+else
+    iters_eff = int32(iters);
+end
+
+% Bucle exterior con limite fijo y streaming
+coder.hdl.loopspec('stream', MAX_ITERS);
+
+for k = 1:MAX_ITERS
+    % Solo hacemos el cuerpo del bucle si no hemos superado iters_eff
+    if k <= iters_eff
+```
+
+Con esto `iters` deja de ser un valor variable para el hardware. El bucle se limita a `MAX_ITERS` y se evita que el compilador asuma cambios de iteracion durante la ejecucion. Ademas se usa la directiva `coder.hdl.loopspec('stream', N)`, lo que permite compartir recursos a cambio de ejecutar el bloque en `N` ciclos.
+
+Tambien se descompusieron operaciones matriciales en bucles para facilitar el streaming. Por ejemplo, el calculo de `v_x`:
+
+```matlab
+% v_x = zk - g + uk   (24 iteraciones)
+coder.hdl.loopspec('stream',24);
+for i = 1:24
+    v_x(i) = zk(i) - g(i) + uk(i);
+end
+```
+
+Con estas modificaciones, al generar HDL se obtiene el siguiente mensaje:
+
+```
+### The DUT requires an initial pipeline setup latency. Each output port experiences these additional delays.
+### Output port 1: 1 cycles.
+ ### MESSAGE: The design requires 100 times faster clock with respect to the base rate = 1.
+```
+
+Esto indica que ahora se requieren 100 ciclos internos por cada entrada y que la salida queda desfasada un ciclo respecto al tiempo de muestreo de entrada.
+
+Resultados de recursos:
+
+![Recursos MPC optimizado](images/HDL_mpc3.png)
+
+Se observa una reduccion importante de recursos, suficiente para que el diseño quepa en la FPGA. Aun se puede optimizar mas, ya que la funcion `mpc` tambien contiene calculos matriciales que pueden compartir recursos.
