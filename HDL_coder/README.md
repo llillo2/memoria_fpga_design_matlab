@@ -36,7 +36,8 @@ En las secciones posteriores del documento, **cada uno de los puntos del diagram
 
 Tal como se muestra en el diagrama, es necesario contar inicialmente con un **diseño en MATLAB o Simulink acompañado de un test exhaustivo del sistema**, con el fin de verificar su correcto funcionamiento antes de avanzar hacia etapas posteriores del flujo de diseño en hardware.
 
-Para comenzar, se realizará un ejemplo sencillo en MATLAB correspondiente al **cálculo del producto punto entre dos vectores**. Este ejemplo se escribe de forma simple y clara, lo cual facilita su posterior análisis y adaptación al flujo de HDL Coder:
+Para comenzar, se realizará un ejemplo sencillo en MATLAB correspondiente al **cálculo del producto punto entre dos vectores** el cua lse encuentra en examples/Producto_punto, este ejemplo sigue el flujo sin errores, luego se procedera con un flujo con errores para explicar buenas practicas. 
+Este ejemplo se escribe de forma simple y clara, lo cual facilita su posterior análisis y adaptación al flujo de HDL Coder:
 
 ```matlab
 function p = producto_punto(Vector_a, Vector_b)
