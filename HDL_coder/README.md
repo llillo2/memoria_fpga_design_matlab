@@ -277,3 +277,43 @@ Si se revisan los recursos utilizados:
 ![Resource report floating point](images/HDL_workflow_code_generation9.png)
 
 Se observa que, aunque se mantiene un solo multiplicador, el resto de recursos aumenta de forma considerable respecto de la versión fixed-point. Para este ejemplo sigue siendo totalmente factible por su tamaño reducido.
+
+## Verificación del HDL y co-simulación
+
+A continuación se prueba el HDL generado mediante un testbench, una co-simulación y, finalmente, una comparación con FPGA en lazo (FIL). Para este flujo se utiliza la versión con **Stream loops** y **fixed-point**.
+
+Primero se ejecuta **Verify with HDL Test Bench**. Se activan las casillas correspondientes y se selecciona la herramienta de simulación. Si la herramienta no aparece, debe añadirse al `path`. Un ejemplo para Vivado 2023.1:
+
+```
+hdlsetuptoolpath('ToolName','Xilinx Vivado','ToolPath','C:\Xilinx\Vivado\2023.1\bin\vivado.bat');
+```
+
+Al ejecutar **Refresh List** debería aparecer la opción. Luego se presiona **Run**. Si surge un problema en esta etapa, suele indicar una mala formación del HDL. Las opciones de solución incluyen activar parámetros sugeridos por la consola en el reporte, o cambiar el lenguaje de salida si el error no es claro.
+
+![Verify HDL Testbench](images/HDL_workflow_cosimulation.png)
+
+Luego se pasa a **Verify with Cosimulation**. En esta simulación se activan las casillas y es fundamental analizar los plots que comparan las salidas. Existe la posibilidad de que, si el código MATLAB es difícil de traducir a HDL (malas prácticas u optimizaciones inadecuadas), las salidas difieran de forma significativa: TODO linkear el ejemplo. Un fallo en esta etapa implica volver a modificar el `.m` para hacerlo compatible con HDL Coder. Esta etapa no soporta `double` ni `single` (floating point).
+
+![Cosimulation](images/HDL_workflow_cosimulation2.png)
+
+Al finalizar aparecerá un gráfico como el siguiente:
+
+![Cosimulation plot](images/HDL_workflow_cosimulation3.png)
+
+El gráfico muestra error 0 para los datos testeados, y es importante remarcar lo siguiente: **solo aplica a los datos testeados**. Si se ingresan valores fuera del rango probado, se pueden obtener salidas incorrectas. Por ejemplo, si se probó un sistema con entradas entre -100 y 100 con 4 decimales de precisión, valores mayores podrían producir salidas sin sentido.
+
+Una vez verificada esta etapa, se pasa a **Verify with FPGA-in-the-Loop (FIL)**. Se activan todas las casillas, se configura la conexión de la FPGA a usar y se presiona **Run**. Esta etapa es lenta, pues se sintetiza, implementa, genera el bitstream y se programa la FPGA para comparar sus salidas con el testbench.
+
+En esta etapa, Vivado puede fallar si el `path` supera los 260 caracteres. Si ocurre, se recomienda mover el proyecto más cerca de la raíz del disco.
+
+![FIL setup](images/HDL_workflow_cosimulation4.png)
+
+Al finalizar, se genera el siguiente gráfico:
+
+![FIL plot](images/HDL_workflow_cosimulation5.png)
+
+Al igual que en cosimulación, no se observa error para los datos usados como muestra. Con esto el proceso finaliza y se obtiene confianza en que, dentro del rango de prueba, el sistema HDL funciona correctamente. Sin embargo, no debe olvidarse que en fixed-point hubo una pérdida de precisión del orden de 1e-2. Esta pérdida no aparece en esta etapa final porque la comparación se realiza con la versión fixed-point y no con el test original.
+
+Con el flujo completado, se puede ir a `codegen/nameproyect/hdlsrc` y utilizar los archivos `.v` (o el lenguaje seleccionado). También es posible continuar en Simulink con **FIL Wizard** para probar nuevos valores de forma más sencilla y visual: TODO linkear.
+
+Para finalizar, se realizará una comparación entre la salida del test de MATLAB y la salida de la FPGA ya cargada con el bitstream del HDL. Esta etapa requiere tener configurada la conexión con la FPGA; una guía se explica en este documento: TODO adjuntar el link.
