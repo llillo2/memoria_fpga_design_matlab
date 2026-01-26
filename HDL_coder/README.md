@@ -711,3 +711,47 @@ Resultados de recursos:
 ![Recursos MPC optimizado](images/HDL_mpc3.png)
 
 Se observa una reduccion importante de recursos, suficiente para que el diseño quepa en la FPGA. Aun se puede optimizar mas, ya que la funcion `mpc` tambien contiene calculos matriciales que pueden compartir recursos.
+
+## Verificacion de timing (post-FIL)
+
+Para saber si el timing se cumple, una vez finalizado el flujo FIL se debe revisar el reporte en:
+
+`mpc_fixpt_fil/fpgaproj/mpc_fixpt_fil.runs/impl_1/mpc_fixp_fil_timing_summary_routed.rpt`
+
+En ese archivo se encuentra el resumen de timing para el reloj elegido. Un extracto tipico es:
+
+```
+------------------------------------------------------------------------------------------------
+| Design Timing Summary
+| ---------------------
+------------------------------------------------------------------------------------------------
+
+    WNS(ns)      TNS(ns)  TNS Failing Endpoints  TNS Total Endpoints      WHS(ns)      THS(ns)  THS Failing Endpoints  THS Total Endpoints     WPWS(ns)     TPWS(ns)  TPWS Failing Endpoints  TPWS Total Endpoints
+    -------      -------  ---------------------  -------------------      -------      -------  ---------------------  -------------------     --------     --------  ----------------------  --------------------
+    -45.561   -15428.046                    445                 3408        0.044        0.000                      0                 3408        3.000        0.000                       0                  1722
+
+------------------------------------------------------------------------------------------------
+| Intra Clock Table
+| -----------------
+------------------------------------------------------------------------------------------------
+
+Clock                     WNS(ns)      TNS(ns)  TNS Failing Endpoints  TNS Total Endpoints      WHS(ns)      THS(ns)  THS Failing Endpoints  THS Total Endpoints     WPWS(ns)     TPWS(ns)  TPWS Failing Endpoints  TPWS Total Endpoints
+-----                     -------      -------  ---------------------  -------------------      -------      -------  ---------------------  -------------------     --------     --------  ----------------------  --------------------
+TCK                         5.516        0.000                      0                  943        0.079        0.000                      0                  943        6.596        0.000                       0                   508
+sysclk                                                                                                                                                                  3.000        0.000                       0                     1
+  clk_out1_clk_wiz_0      -45.561   -15428.046                    445                 2465        0.044        0.000                      0                 2465       18.750        0.000                       0                  1210
+  clkfbout_clk_wiz_0                                                                                                                                                    7.845        0.000                       0                     3
+
+Timing constraints are not met.
+
+Clock                 Waveform(ns)       Period(ns)      Frequency(MHz)
+-----                 ------------       ----------      --------------
+TCK                   {0.000 7.576}      15.152          65.998
+sysclk                {0.000 5.000}      10.000          100.000
+  clk_out1_clk_wiz_0  {0.000 20.000}     40.000          25.000
+  clkfbout_clk_wiz_0  {0.000 5.000}      10.000          100.000
+```
+
+En este ejemplo, `clk_out1_clk_wiz_0` es el reloj interno del diseno y `TCK` es el reloj del wrapper que comunica la FPGA con MATLAB/Simulink. El valor `WNS = -45.561` indica que, para el reloj interno de 40 ns (25 MHz), el diseno aun necesita al menos 45.561 ns adicionales para cumplir la restriccion. En otras palabras, ese camino critico no llega a cerrar timing.
+
+Es importante considerar que cada implementacion puede cambiar el timing segun la optimizacion que realice la herramienta (sintesis, mapeo y ruteo). Por eso, para analizar timing con mayor precision se recomienda implementar el HDL generado directamente en Vivado (o en la herramienta del fabricante correspondiente). Aun asi, revisar este reporte en el flujo FIL entrega una primera idea de cuan lejos o cerca esta el diseno del objetivo, y si es necesario ajustar el codigo `.m` o la configuracion de HDL Coder.
