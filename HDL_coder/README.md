@@ -128,6 +128,25 @@ Esto generará un gráfico comparando las salidas del test original y del test c
 
 En el gráfico se aprecia un error del orden de 1e-2. En fixed-point la pérdida de precisión fraccional es habitual, pero al aumentar los bits dedicados a la fracción se reduce el orden de magnitud del error. En casos sin fracciones, fixed-point puede llegar a error 0.
 
+## Efecto del output delay en FIL
+
+Para evaluar si el output delay afecta el desempeño, conviene modelarlo explícitamente en Simulink. El siguiente diagrama representa el PID con anti-windup del ejemplo `PIDaw`, con un output delay de 1:
+
+![PIDaw con output delay 1](images/pidaw_diagram.png)
+
+Si queremos visualizar cómo se vería con un output delay de 5, se puede representar así:
+
+![PIDaw con output delay 5](images/pidaw_diagram2.png)
+
+Cada bloque **Unit Delay** usa el mismo sample time que la entrada al bloque FIL, que en este caso es **1 ms**. Por lo tanto, un output delay de 5 implica **5 ciclos de latencia** desde la salida del controlador hasta la planta.
+
+Es clave separar **throughput** y **latencia**:
+
+- El throughput se mantiene en **1 ms**: la planta recibe una nueva muestra cada 1 ms.
+- La latencia aumenta a **5 ms**: un cambio en la salida del controlador se refleja en la entrada de la planta 5 ms después.
+
+Si el requisito del diseño es que un cambio en la salida se vea reflejado en la entrada de la planta en **1 ms**, entonces un output delay de 5 **no cumple** ese requisito, porque la planta recién ve el efecto a los **5 ms**.
+
 ### Generación de código HDL
 
 Se continúa a **HDL Code Generation**:
@@ -315,9 +334,9 @@ Al finalizar, se genera el siguiente gráfico:
 
 Al igual que en cosimulación, no se observa error para los datos usados como muestra. Con esto el proceso finaliza y se obtiene confianza en que, dentro del rango de prueba, el sistema HDL funciona correctamente. Sin embargo, no debe olvidarse que en fixed-point hubo una pérdida de precisión del orden de 1e-2. Esta pérdida no aparece en esta etapa final porque la comparación se realiza con la versión fixed-point y no con el test original.
 
-Con el flujo completado, se puede ir a `codegen/nameproyect/hdlsrc` y utilizar los archivos `.v` (o el lenguaje seleccionado). También es posible continuar en Simulink con **FIL Wizard** para probar nuevos valores de forma más sencilla y visual: TODO linkear.
+Con el flujo completado, se puede ir a `codegen/nameproyect/hdlsrc` y utilizar los archivos `.v` (o el lenguaje seleccionado). También es posible continuar en Simulink con **FIL Wizard** para probar nuevos valores de forma más sencilla y visual: ver la [guia fil](../HDL_Verifier/FIL/README.md).
 
-Para finalizar, se realizará una comparación entre la salida del test de MATLAB y la salida de la FPGA ya cargada con el bitstream del HDL. Esta etapa requiere tener configurada la conexión con la FPGA; una guía se explica en este documento: TODO adjuntar el link.
+Para finalizar, se realizará una comparación entre la salida del test de MATLAB y la salida de la FPGA ya cargada con el bitstream del HDL. Esta etapa requiere tener configurada la conexión con la FPGA; la guía está en [guia fil](../HDL_Verifier/FIL/README.md).
 
 ## Ejemplo MPC (caso complejo)
 
