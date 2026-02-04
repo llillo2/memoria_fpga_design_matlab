@@ -128,25 +128,6 @@ Esto generará un gráfico comparando las salidas del test original y del test c
 
 En el gráfico se aprecia un error del orden de 1e-2. En fixed-point la pérdida de precisión fraccional es habitual, pero al aumentar los bits dedicados a la fracción se reduce el orden de magnitud del error. En casos sin fracciones, fixed-point puede llegar a error 0.
 
-## Efecto del output delay en FIL
-
-Para evaluar si el output delay afecta el desempeño, conviene modelarlo explícitamente en Simulink. El siguiente diagrama representa el PID con anti-windup del ejemplo `PIDaw`, con un output delay de 1:
-
-![PIDaw con output delay 1](images/pidaw_diagram.png)
-
-Si queremos visualizar cómo se vería con un output delay de 5, se puede representar así:
-
-![PIDaw con output delay 5](images/pidaw_diagram2.png)
-
-Cada bloque **Unit Delay** usa el mismo sample time que la entrada al bloque FIL, que en este caso es **1 ms**. Por lo tanto, un output delay de 5 implica **5 ciclos de latencia** desde la salida del controlador hasta la planta.
-
-Es clave separar **throughput** y **latencia**:
-
-- El throughput se mantiene en **1 ms**: la planta recibe una nueva muestra cada 1 ms.
-- La latencia aumenta a **5 ms**: un cambio en la salida del controlador se refleja en la entrada de la planta 5 ms después.
-
-Si el requisito del diseño es que un cambio en la salida se vea reflejado en la entrada de la planta en **1 ms**, entonces un output delay de 5 **no cumple** ese requisito, porque la planta recién ve el efecto a los **5 ms**.
-
 ### Generación de código HDL
 
 Se continúa a **HDL Code Generation**:
@@ -774,3 +755,22 @@ sysclk                {0.000 5.000}      10.000          100.000
 En este ejemplo, `clk_out1_clk_wiz_0` es el reloj interno del diseno y `TCK` es el reloj del wrapper que comunica la FPGA con MATLAB/Simulink. El valor `WNS = -45.561` indica que, para el reloj interno de 40 ns (25 MHz), el diseno aun necesita al menos 45.561 ns adicionales para cumplir la restriccion. En otras palabras, ese camino critico no llega a cerrar timing.
 
 Es importante considerar que cada implementacion puede cambiar el timing segun la optimizacion que realice la herramienta (sintesis, mapeo y ruteo). Por eso, para analizar timing con mayor precision se recomienda implementar el HDL generado directamente en Vivado (o en la herramienta del fabricante correspondiente). Aun asi, revisar este reporte en el flujo FIL entrega una primera idea de cuan lejos o cerca esta el diseno del objetivo, y si es necesario ajustar el codigo `.m` o la configuracion de HDL Coder.
+
+## Efecto del output delay en FIL
+
+Para evaluar si el output delay afecta el desempeno, conviene modelarlo explicitamente en Simulink. El siguiente diagrama representa el PID con anti-windup del ejemplo `PIDaw`, con un output delay de 1:
+
+![PIDaw con output delay 1](images/pidaw_diagram.png)
+
+Si queremos visualizar como se veria con un output delay de 5, se puede representar asi:
+
+![PIDaw con output delay 5](images/pidaw_diagram2.png)
+
+Cada bloque **Unit Delay** usa el mismo sample time que la entrada al bloque FIL, que en este caso es **1 ms**. Por lo tanto, un output delay de 5 implica **5 ciclos de latencia** desde la salida del controlador hasta la planta.
+
+Es clave separar **throughput** y **latencia**:
+
+- El throughput se mantiene en **1 ms**: la planta recibe una nueva muestra cada 1 ms.
+- La latencia aumenta a **5 ms**: un cambio en la salida del controlador se refleja en la entrada de la planta 5 ms despues.
+
+Si el requisito del diseno es que un cambio en la salida se vea reflejado en la entrada de la planta en **1 ms**, entonces un output delay de 5 **no cumple** ese requisito, porque la planta recien ve el efecto a los **5 ms**.
