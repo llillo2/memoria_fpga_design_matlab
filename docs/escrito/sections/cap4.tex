@@ -1,0 +1,50 @@
+\chapter{Resultados experimentales}
+
+\section{Validación funcional de códigos generados}
+La validación funcional se realizó comparando el comportamiento del modelo de referencia en Matlab/Simulink con el HDL generado. Se trabajó en tres niveles: simulación a nivel de modelo, co-simulación HDL y ejecución \textit{FPGA-in-the-Loop}. En cada etapa se aplicaron estímulos representativos y pruebas de borde para verificar saturación, truncamiento y reinicio. El foco estuvo en concluir si el flujo mantiene equivalencia funcional bajo las restricciones de hardware, sin detallar la implementación de cada ejemplo.
+
+Para evitar diferencias por cuantización, los modelos se ajustaron a \textit{fixed-point} con escalamiento explícito y saturación activada en bloques aritméticos críticos. La comparación se realizó en forma \textit{bit-accurate} cuando fue posible y, en casos con punto flotante, se emplearon tolerancias acordes al error de cuantización. En términos cualitativos, la equivalencia funcional se observó en la respuesta transitoria y estacionaria; las discrepancias principales aparecieron en condiciones de saturación y en acumuladores integrales, lo que confirma la necesidad de ajustar el rango dinámico desde etapas tempranas y de usar bancos de prueba con señales representativas.
+
+\subsection{Producto punto (flujo base)}
+La generación en punto fijo mostró buena correspondencia con el modelo de referencia dentro del rango de pruebas, con errores acotados por la precisión fraccional. El uso de \textit{stream loops} permitió compartir multiplicadores en un producto punto 3x1, reduciendo recursos a costa de mayor latencia interna y un requerimiento de reloj más alto. Cuando se desactiva el \textit{streaming}, el HDL se vuelve combinacional, con menor latencia pero sin ahorro de recursos, lo que no escala en casos reales. En punto flotante se observó un aumento significativo de recursos y latencia sin beneficios claros para este ejemplo. La co-simulación y el \textit{FIL} no mostraron errores para los datos testeados, lo que refuerza la necesidad de un banco de pruebas representativo y de rangos bien definidos.
+
+\subsection{PID con anti-windup}
+El flujo \textit{FIL} replica el comportamiento del controlador en lazo cerrado con parámetros configurables y evidencia que el anti-windup reduce el sobreimpulso frente a referencias altas. La equivalencia funcional depende de mantener coherencia de saturaciones, tiempos de muestreo y escalamiento entre Simulink y HDL. Al usar \textit{fixed-point} con \texttt{fixdt} en entradas, sumadores y multiplicadores, y saturación en overflow, se evita que la salida exceda los límites físicos del actuador. Las pruebas con referencia elevada muestran que una ganancia de anti-windup más baja incrementa el sobreimpulso, mientras que una ganancia mayor reduce la saturación pero ralentiza la respuesta. El caso confirma que el control discreto es un candidato directo para generación automática si se cuidan los tipos de dato y la coherencia de lazo cerrado.
+
+\subsection{Control PI y overclocking}
+El factor de \textit{overclocking} debe coincidir con los ciclos internos del diseño para reproducir el comportamiento del modelo base. En el PI, la señal \texttt{D1\_ap\_vld} indicó que la salida válida ocurre cada 11 ciclos internos, por lo que un \textit{overclocking} de 11 reproduce la respuesta del modelo. Un factor menor degrada la respuesta (submuestreo), mientras que un factor muy alto introduce sobreimpulso y mayor tiempo de asentamiento (sobremuestreo). Esto confirma que el ajuste de muestreo es crítico en la validación con \textit{FIL} cuando existe cómputo multicíclo.
+
+\subsection{Contador y muestreo}
+El ejemplo del contador permite inferir el \textit{overclocking} necesario a partir del periodo observado en la salida. El módulo implementa contadores a distintos ritmos (\texttt{cnt1}, \texttt{cnt10}, \texttt{cnt17}); al probar \textit{OF} de 1, 10 y 17 se observa que cada canal reproduce el incremento esperado cuando el \textit{OF} coincide con su frecuencia interna. Un \textit{overclocking} alto produce acumulación interna y valores observados mayores a los esperados en los canales más rápidos, lo que muestra que el muestreo debe alinearse con la frecuencia efectiva de cada subcontador y que el \textit{OF} puede estimarse a partir del periodo observado.
+
+\subsection{Núcleo de SNN}
+La SNN muestra que el flujo es viable para arquitecturas por eventos y que la equivalencia se mantiene si el \textit{oversampling} interno se configura de acuerdo con la latencia del diseño. Para evitar 784 puertos, las entradas se empaquetan en un bus \texttt{ufix784} y se procesan por frames. El log de HDL indica una latencia fija de 1 ciclo y un requerimiento de reloj interno de 7840 veces el \textit{base rate}, por lo que el \textit{oversampling} del bloque FIL debe coincidir con ese valor para replicar el comportamiento. La comparación flotante vs fijo evidenció diferencias menores que se corrigen ajustando bits fraccionarios. Se recomienda aumentar el número de frames para elevar la confianza estadística y cubrir casos borde.
+
+\section{Evaluación de ADMM en distintas plataformas}
+El caso ADMM/MPC representa el límite práctico del flujo cuando la descripción original no está orientada a sintetizabilidad. Sin optimización, el uso de recursos es excesivo y la implementación en FPGA falla por tamaño. Al reestructurar los bucles y fijar el número máximo de iteraciones, se reduce la utilización y se obtiene un HDL viable, aunque con una frecuencia interna elevada. La conclusión principal es que el algoritmo puede mantenerse funcional, pero requiere cambios explícitos en la forma de cómputo para que la herramienta explote el \textit{resource sharing}.
+
+\subsection{Errores numéricos}
+Los errores numéricos se concentran en cuantización de coeficientes y truncamiento intermedio. En ADMM, la cuantización de matrices impacta la solución óptima y puede introducir oscilaciones leves si la escala no es adecuada. El uso de punto fijo exige validar rangos máximos para evitar saturaciones silenciosas, especialmente cuando se comparten recursos y se incrementa la latencia interna.
+
+Para mitigar estos efectos se recomienda aplicar escalamiento por etapa, incluir márgenes de saturación y validar con señales que cubran la dinámica completa. Con tamaños de palabra adecuados se observan diferencias acotadas y consistentes entre co-simulación y \textit{FIL}.
+
+\subsection{Caracterización tiempos de ejecución}
+Los tiempos de ejecución se relacionan directamente con la latencia de pipeline y la frecuencia interna requerida. En ADMM, el costo está dominado por operaciones matriciales y por el número de iteraciones; al fijar el máximo de iteraciones se obtiene un tiempo determinista por muestra, con un \textit{overclocking} alto. La implementación en FPGA entrega determinismo temporal, mientras que en software el tiempo depende del sistema operativo y de la carga.
+
+\begin{table}[h]
+  \centering
+  \caption{Resumen de mediciones por caso (completar con reportes de síntesis y \textit{FIL}).}
+  \label{tab:tiempos}
+  \begin{tabular}{lccc}
+    \toprule
+    Caso & Frecuencia objetivo (MHz) & Latencia (ciclos) & Recursos (LUT/FF/DSP) \\
+    \midrule
+    Producto punto & -- & -- & -- \\
+    PID anti-windup & -- & -- & -- \\
+    PI (overclocking) & -- & -- & -- \\
+    Contador (overclocking) & -- & -- & -- \\
+    SNN & -- & -- & -- \\
+    ADMM/MPC & -- & -- & -- \\
+    \bottomrule
+  \end{tabular}
+\end{table}
