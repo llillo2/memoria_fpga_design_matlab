@@ -2,12 +2,7 @@
 
 Este repositorio contiene un proyecto academico orientado a **guiar el uso basico de HDL Coder y HDL Verifier** para la generacion de HDL a partir de modelos de alto nivel en MATLAB/Simulink. El material combina explicaciones conceptuales, pasos de configuracion y ejemplos reproducibles que permiten comprender el flujo completo: desde el modelo funcional en alto nivel hasta la verificacion en co-simulacion y FPGA-in-the-Loop (FIL).
 
-El objetivo principal es **reducir la brecha entre el diseno algorítmico y su implementacion en hardware**, mostrando buenas practicas para:
-- convertir modelos a punto fijo,
-- controlar latencia y throughput,
-- manejar saturacion y escalamiento,
-- interpretar reportes de recursos,
-- validar equivalencia funcional entre modelos y HDL.
+El objetivo principal es **reducir la brecha entre el diseno algorítmico y su implementacion en hardware**, mostrando buenas practicas y un flujo reproducible de trabajo.
 
 ## Alcance
 
@@ -42,5 +37,3 @@ El repositorio esta organizado por ejemplos practicos y documentos de soporte. C
 - Los resultados dependen de las versiones de MATLAB/Simulink y de las herramientas de sintesis utilizadas.
 
 ---
-
-Si necesitas ampliar algun ejemplo o agregar nuevos casos, la estructura del repositorio esta pensada para crecer sin romper el flujo principal.
