@@ -1,3 +1,5 @@
+# PID con Anti-Windup en Simulink, HDL Coder y FIL
+
 En este ejemplo se ilustra el diseno e implementacion de un controlador PID con
 anti-windup en MATLAB/Simulink y el flujo de conversion a HDL con HDL Coder. El
 diseno del PID considera todos sus parametros como entradas editables desde
@@ -9,6 +11,25 @@ adicional.
 Ademas, se documenta la estructura discreta del PID, su implementacion en
 Simulink y los pasos minimos para convertir el subsystem a HDL y validarlo en
 un esquema FPGA-in-the-Loop.
+
+## Requisitos
+
+- MATLAB/Simulink R2025b Update 2 (`2025.2`)
+- HDL Coder
+- HDL Verifier
+- Vivado `2023.1`
+
+## Quick Start
+
+1. Abrir el modelo `PID_antiwidup.slx` en MATLAB.
+2. Verificar que el controlador use datos en punto fijo `fixdt(1,32,26)` en
+   entradas y señales principales.
+3. Ejecutar la simulacion del lazo cerrado en Simulink.
+4. Generar HDL del subsystem del PID con HDL Coder.
+5. Crear el bloque FIL con HDL Verifier y configurar la compilacion en Vivado
+   `2023.1`.
+6. Ejecutar la co-simulacion FPGA-in-the-Loop y comparar la respuesta con la
+   simulacion base de Simulink.
 
 
 En esta etapa se modela un PID con anti-windup en tiempo discreto. El error se
@@ -118,7 +139,7 @@ Consideraciones principales:
 - Entre el sistema discretizado y la planta continua se usa un `Zero-Order
   Hold` y un `Data Type Conversion` a `double`; esto simula un DAC.
 - En la retroalimentacion de la planta hacia el controlador se usa un
-  `Zero-Order Hold` y un conversion de `double` a `fixdt(0,32,26)`; esto simula
+  `Zero-Order Hold` y una conversion de `double` a `fixdt(1,32,26)`; esto simula
   un ADC.
 - Para la conexion de la salida del actuador con el controlador se usa un
   bloque `Conversion` y un `Zero-Order Hold`.
@@ -257,22 +278,5 @@ respuesta sea mas lenta.
 
 Con esto terminado se ha podido verificar el funcionamiento en FPGA de un
 controlador PID con anti-windup, con todos sus parametros editables desde
-fuera, usando las herramientas MATLAB HDL Verifier y HDL Coder.
-
-
-Con el subsystem definido, se prepara el flujo de verificacion con HDL Verifier
-para FPGA-in-the-Loop. Se revisan los puertos de entrada y salida del
-controlador, los tiempos de muestreo y los limites de saturacion para asegurar
-coherencia entre Simulink y la ejecucion en FPGA.
-
-
-Las pruebas FPGA-in-the-Loop verifican que la respuesta del controlador se
-mantenga estable y que el anti-windup limite la acumulacion del termino
-integral cuando la salida se satura. Se comparan senales de referencia entre
-Simulink y la ejecucion en FPGA para validar el comportamiento.
-
-
-El modelo PID con anti-windup se puede llevar a HDL manteniendo la estructura
-discreta y el mecanismo de saturacion. El uso de HDL Coder y HDL Verifier
-permite preparar el controlador para pruebas FPGA-in-the-Loop con una ruta
-directa desde Simulink.
+fuera, usando las herramientas MATLAB HDL Verifier y HDL Coder, manteniendo
+coherencia entre la simulacion en Simulink y la ejecucion FPGA-in-the-Loop.
