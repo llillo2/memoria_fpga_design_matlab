@@ -1,0 +1,35 @@
+\chapter{Anexos}
+
+\section{Material complementario}
+El repositorio asociado a esta memoria concentra los modelos, scripts y reportes necesarios para reproducir cada resultado presentado en los capítulos anteriores. Su organización fue pensada para que un lector pueda repetir el flujo completo sin depender de configuraciones ocultas ni de pasos manuales ambiguos. Por esta razón, cada ejemplo mantiene una estructura estable, con artefactos de entrada, configuraciones de generación HDL y evidencias de salida separadas por caso de estudio.
+
+En particular, se incluyen:
+
+\begin{itemize}
+    \item Modelos de cada caso de estudio, con variantes en \textit{fixed-point} y configuraciones orientadas a implementación en FPGA.
+    \item Scripts para ejecución del flujo, generación HDL, preparación de pruebas y configuración de \textit{FIL}.
+    \item Archivos de proyecto y restricciones de temporización para las plataformas objetivo.
+    \item Reportes de síntesis y utilización de recursos, junto con bitstreams generados.
+\end{itemize}
+
+El objetivo del material complementario es permitir que el lector replique el flujo completo y evalúe variaciones del diseño sin reestructurar los modelos base. Esta capacidad de reutilización es relevante porque permite iterar sobre un mismo ejemplo cambiando solo una variable de interés, por ejemplo precisión numérica, nivel de \textit{pipeline} o estrategia de recursos, y observar su impacto directo en las métricas finales.
+
+\section{Guía breve de reproducción}
+Para facilitar la repetición de resultados, se propone seguir una secuencia uniforme para todos los ejemplos:
+
+\begin{enumerate}
+    \item Verificar que el modelo del caso de estudio ejecute correctamente en simulación funcional con los estímulos de prueba definidos.
+    \item Ejecutar la generación HDL y revisar mensajes de consistencia sobre tipos, latencias e inferencia de bloques.
+    \item Correr síntesis en la plataforma objetivo y registrar ocupación de multiplicadores, sumadores, registros, multiplexores y memorias.
+    \item Activar validacion \textit{FIL} para comparar salidas de hardware contra referencia funcional bajo los mismos estimulos.
+    \item Consolidar resultados en tablas comparables entre ejemplos, manteniendo criterios unificados de reporte.
+\end{enumerate}
+
+Esta secuencia evita que la validación quede reducida a una sola evidencia y promueve una lectura integral del diseño: corrección funcional, viabilidad de síntesis y comportamiento temporal en hardware. Además, la repetición disciplinada de los mismos pasos entre casos ayuda a detectar con rapidez cuándo una diferencia de resultados se debe al algoritmo y no a cambios en el procedimiento.
+
+\section{Datos adicionales}
+Para facilitar la comparación entre versiones, se mantuvieron registros de configuración del \textit{HDL Workflow Advisor}, versiones de entorno y parámetros de hardware. Adicionalmente, se documentan las señales de prueba utilizadas en simulación y los criterios de aceptación para equivalencia funcional en la validación \textit{FIL}.
+
+Como apoyo a la interpretación de resultados, se incorporan también observaciones cualitativas de cada corrida: advertencias de síntesis, ajustes requeridos para cierre temporal y decisiones de arquitectura aplicadas durante la iteración. Este tipo de anotaciones complementa las tablas numéricas, ya que explica por qué dos versiones con métricas similares pueden tener costos de implementación muy distintos en la práctica.
+
+Se recomienda mantener la trazabilidad de cambios en el repositorio y actualizar las tablas cuando se incorporen nuevos algoritmos o plataformas. Esta práctica permite construir una base de evidencia acumulativa y comparar de forma consistente el impacto de nuevas configuraciones, mejoras del modelo o refinamientos numéricos. En conjunto, los anexos no solo respaldan los resultados obtenidos, sino que definen una ruta concreta para extender el trabajo en futuras iteraciones.
