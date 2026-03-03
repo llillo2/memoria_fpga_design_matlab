@@ -32,7 +32,7 @@ A continuación, se presenta un **diagrama de flujo** que indica la **secuencia 
 En las secciones posteriores del documento, **cada uno de los puntos del diagrama será explicado en detalle**, justificando su propósito dentro del flujo de diseño y describiendo las razones por las cuales se recomienda seguir dicha secuencia para obtener implementaciones más eficientes, verificables y mantenibles.
 
 
-![Diagrama de flujo ](images/diagrama_de_flujo.svg)
+![Diagrama de flujo ](images/diagram_V3.svg)
 
 Tal como se muestra en el diagrama, es necesario contar inicialmente con un **diseño en MATLAB o Simulink acompañado de un test exhaustivo del sistema**, con el fin de verificar su correcto funcionamiento antes de avanzar hacia etapas posteriores del flujo de diseño en hardware.
 
@@ -85,6 +85,19 @@ Tal como se observa en el código, además de realizar el test del algoritmo, se
 ## Workflow Advisor: configuración y generación de HDL
 
 A continuación se describe el flujo práctico dentro de HDL Coder una vez que ya se dispone del diseño en MATLAB y su testbench correspondiente.
+
+### Capacidades clave de HDL Coder
+
+Antes de entrar al paso a paso, conviene tener claras las capacidades que aporta la herramienta dentro del flujo:
+
+- Generación de código HDL sintetizable (VHDL/Verilog) desde funciones MATLAB y modelos Simulink/Stateflow.
+- Generación automática de testbench y de modelos para co-simulación.
+- Reportes HTML de recursos, optimizaciones y conformidad HDL.
+- Trazabilidad entre modelo y código generado para depuración y revisión.
+- Integración con HDL Verifier para validación por cosimulación y FPGA-in-the-Loop (FIL).
+- Opciones de optimización de arquitectura (sharing, stream loops, pipeline), con impacto directo en área, latencia y frecuencia.
+
+Estas capacidades aceleran el prototipado, pero no reemplazan el criterio de diseño: la calidad final depende de cómo esté modelado el algoritmo y de la configuración elegida en el workflow.
 
 ### Apertura del Workflow Advisor
 
@@ -220,6 +233,18 @@ Ahora no aparecen los mensajes `Output port 1: 1 cycles` ni `MESSAGE: The design
 
 Si en lugar de 3 iteraciones se tuvieran 10.000 o 100.000 (como es común en casos reales), sería necesario compartir recursos; de lo contrario el diseño no cabría en una FPGA.
 
+### Optimización de área (guía práctica)
+
+En términos prácticos, la optimización de área en HDL Coder se apoya principalmente en compartir hardware entre operaciones equivalentes y en reducir paralelismo innecesario. Para diseños que crecen rápido en recursos, estas reglas suelen ayudar:
+
+- Priorizar estructuras seriales cuando el requisito de throughput lo permita.
+- Favorecer aritmética simple y evitar operaciones costosas si existe una formulación equivalente.
+- Limitar arreglos y matrices grandes cuando no son estrictamente necesarios.
+- Migrar de floating-point a fixed-point de forma controlada y validada.
+- Usar `stream loops` y `SharingFactor` cuando se busque N-a-1 en recursos equivalentes.
+
+Es importante considerar el costo de esta estrategia: al compartir recursos, el diseño suele requerir multiplexación adicional y una frecuencia interna mayor. En otras palabras, se reduce área, pero se tensiona más el cumplimiento de timing. Por eso, la optimización de área debe evaluarse junto con latencia y frecuencia objetivo, no de forma aislada.
+
 ### Generación en punto flotante
 
 Se repite el proceso para punto flotante. En el **HDL Workflow Advisor**, en lugar de **Convert to fixed-point at build time** se selecciona **Keep original types**, lo que salta la etapa de fixed-point:
@@ -278,6 +303,16 @@ Si se revisan los recursos utilizados:
 ![Resource report floating point](images/HDL_workflow_code_generation9.png)
 
 Se observa que, aunque se mantiene un solo multiplicador, el resto de recursos aumenta de forma considerable respecto de la versión fixed-point. Para este ejemplo sigue siendo totalmente factible por su tamaño reducido.
+
+## Latencia, throughput y timing: criterios de interpretación
+
+En este flujo conviene separar tres conceptos que suelen mezclarse al analizar resultados:
+
+- **Latencia**: número de ciclos (o tiempo) desde que entra un dato hasta que aparece su salida correspondiente.
+- **Throughput**: ritmo al que el diseño puede aceptar/producir datos una vez lleno el pipeline.
+- **Timing**: capacidad del diseño de cumplir las restricciones de reloj tras síntesis e implementación.
+
+Una optimización puede mejorar un eje y empeorar otro. Por ejemplo, compartir recursos reduce área, pero puede aumentar latencia y exigir mayor frecuencia interna. Del mismo modo, aumentar pipeline puede mejorar frecuencia máxima, pero introducir más ciclos de retardo. Por eso, la evaluación final siempre debe hacerse con los tres ejes en conjunto y contra los requisitos del sistema, no solo contra una métrica aislada.
 
 ## Verificación del HDL y co-simulación
 
@@ -774,3 +809,9 @@ Es clave separar **throughput** y **latencia**:
 - La latencia aumenta a **5 ms**: un cambio en la salida del controlador se refleja en la entrada de la planta 5 ms despues.
 
 Si el requisito del diseno es que un cambio en la salida se vea reflejado en la entrada de la planta en **1 ms**, entonces un output delay de 5 **no cumple** ese requisito, porque la planta recien ve el efecto a los **5 ms**.
+
+## Limitaciones y criterios de uso
+
+HDL Coder es una herramienta muy efectiva para acelerar la transición desde modelos de alto nivel a implementaciones HDL verificables. Sin embargo, en diseños complejos no garantiza por sí sola el resultado óptimo en recursos o timing. Cuando el modelo no está escrito con criterios de sintetizabilidad, suele ser necesario refactorizar funciones, controlar iteraciones, ajustar tipos y redefinir arquitectura.
+
+En la práctica, la herramienta funciona mejor como acelerador de iteración y validación temprana: permite llegar rápido a una implementación funcional, detectar cuellos de botella y orientar decisiones de diseño. Para usuarios con menor experiencia en RTL, este enfoque reduce la barrera de entrada y permite aprender de forma progresiva, siempre complementando con revisión de reportes y criterio de ingeniería digital.
