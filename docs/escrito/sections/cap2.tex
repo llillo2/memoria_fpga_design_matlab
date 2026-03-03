@@ -34,6 +34,8 @@ Un elemento crítico es la conversión de punto flotante a punto fijo. HDL Coder
 
 Además, HDL Coder puede generar IP cores con interfaces estándar para integrarlos en flujos de diseño de FPGA. Este paso es relevante cuando el diseño se conecta a buses o a procesadores embebidos, ya que permite empaquetar el bloque como IP con interfaces configurables y documentación de puertos.
 
+Como evidencia de casos de uso en la literatura, Purraji et al. reportan la implementación en FPGA de un MPC de primer orden mediante HDL Coder, con resultados competitivos en tiempo de muestreo y utilización de recursos \cite{purraji2025mpc_hdlcoder}. En contraste, esta memoria enfatiza una guía metodológica más transversal y reutilizable, orientada no solo a un controlador particular, sino a un flujo completo de modelado, generación, validación temporal y trazabilidad para múltiples tipos de diseños.
+
 \subsection{HDL Verifier}
 
 HDL Verifier complementa el flujo de HDL Coder con mecanismos de verificación. Permite realizar co-simulación entre Simulink y simuladores HDL de terceros, comparando la salida del modelo con la del HDL generado y reportando discrepancias. Esta etapa es especialmente útil para detectar errores de cuantización, latencias desalineadas o efectos de saturación que no aparecen en simulación puramente en software \cite{matlabHDLVerifier}.
