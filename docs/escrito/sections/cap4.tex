@@ -45,15 +45,10 @@ Para mitigar estos efectos se recomienda aplicar escalamiento por etapa, incluir
 
 Un aspecto relevante es que el error numérico no se distribuye de manera uniforme: suele concentrarse en etapas donde convergen acumulaciones o donde la dinámica del algoritmo cambia de régimen. Por ello, la validación no debe limitarse a promedios globales; conviene inspeccionar segmentos críticos de la señal para detectar sesgos o saturaciones locales que puedan degradar el comportamiento del sistema completo.
 
-\subsubsection{Caracterización tiempos de ejecución}
-Los tiempos de ejecución se relacionan directamente con la latencia de pipeline y la frecuencia interna requerida. En ADMM, el costo está dominado por operaciones matriciales y por el número de iteraciones; al fijar el máximo de iteraciones se obtiene un tiempo determinista por muestra, con un \textit{overclocking} alto. La implementación en FPGA entrega determinismo temporal, mientras que en software el tiempo depende del sistema operativo y de la carga.
-
-En diseños validados con \textit{FIL}, esta caracterización temporal debe interpretarse junto con el tipo de interfaz y la política de muestreo del banco de pruebas. Una latencia de hardware baja no necesariamente se traduce en mejor respuesta de sistema si el acoplamiento con Simulink introduce esperas adicionales o si el factor de sobre-reloj se configura por debajo del requerido. En consecuencia, la métrica temporal útil para comparación no es solo ``ciclos del DUT'', sino ``ciclos del DUT bajo configuración efectiva de prueba''.
-
 \section{Métricas de implementación}
 Abreviaturas de casos: PP (Producto punto), PID-AW (PID anti-windup), PID-AW-FP (PID anti-windup en \textit{floating-point}), SNN (núcleo SNN con \textit{stream}), SNN-NS (SNN sin \textit{stream}) y ADMM (ADMM/MPC).
 
-\begin{table}[tbp]
+\begin{table}[H]
   \centering
   \caption{Resumen de mediciones por caso (completar con reportes de síntesis y \textit{FIL}).}
   \label{tab:tiempos}
