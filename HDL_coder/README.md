@@ -15,10 +15,6 @@ El uso de HDL Coder aporta múltiples ventajas en entornos de diseño profesiona
 
 El presente documento tiene como objetivo **facilitar el uso de HDL Coder** a usuarios que comienzan a trabajar con esta herramienta, proporcionando una guía práctica basada en **consejos útiles y buenas prácticas**. Su enfoque está orientado a ayudar al lector a comprender los aspectos fundamentales del flujo de trabajo, evitar errores comunes en las primeras etapas y adoptar criterios de diseño que favorezcan una implementación eficiente y verificable en hardware.
 
-## Alcance del documento
-
-El presente documento tiene como objetivo **facilitar el uso de HDL Coder** a usuarios que comienzan a trabajar con esta herramienta, proporcionando una guía práctica basada en **consejos útiles y buenas prácticas**. Su enfoque está orientado a ayudar al lector a comprender los aspectos fundamentales del flujo de trabajo, evitar errores comunes en las primeras etapas y adoptar criterios de diseño que favorezcan una implementación eficiente y verificable en hardware.
-
 Este material no pretende reemplazar la documentación oficial de MathWorks, sino servir como un **complemento introductorio** orientado a la experiencia práctica. Para una descripción completa y detallada de la herramienta, se recomienda consultar la documentación oficial de HDL Coder disponible en  
 https://www.mathworks.com/help/hdlcoder/index.html  
 así como la guía de inicio  
@@ -32,12 +28,13 @@ A continuación, se presenta un **diagrama de flujo** que indica la **secuencia 
 En las secciones posteriores del documento, **cada uno de los puntos del diagrama será explicado en detalle**, justificando su propósito dentro del flujo de diseño y describiendo las razones por las cuales se recomienda seguir dicha secuencia para obtener implementaciones más eficientes, verificables y mantenibles.
 
 
-![Diagrama de flujo ](images/diagram_V3.svg)
+![Diagrama de flujo ](images/diagrama_de_flujo.svg)
 
 Tal como se muestra en el diagrama, es necesario contar inicialmente con un **diseño en MATLAB o Simulink acompañado de un test exhaustivo del sistema**, con el fin de verificar su correcto funcionamiento antes de avanzar hacia etapas posteriores del flujo de diseño en hardware.
 
-Para comenzar, se realizará un ejemplo sencillo en MATLAB correspondiente al **cálculo del producto punto entre dos vectores** el cua lse encuentra en examples/Producto_punto, este ejemplo sigue el flujo sin errores, luego se procedera con un flujo con errores para explicar buenas practicas. 
-Este ejemplo se escribe de forma simple y clara, lo cual facilita su posterior análisis y adaptación al flujo de HDL Coder:
+Para comenzar se utilizará un ejemplo sencillo en MATLAB correspondiente al **cálculo del producto punto entre dos vectores**, disponible en `examples/Producto_punto`. Este primer caso sigue un flujo limpio y sin errores, por lo que sirve para introducir la herramienta. Más adelante se presentará un caso con problemas de implementación para discutir buenas prácticas y criterios de diseño.
+
+El ejemplo está escrito de forma simple y clara, lo que facilita su análisis y su adaptación al flujo de HDL Coder:
 
 ```matlab
 function p = producto_punto(Vector_a, Vector_b)
@@ -123,7 +120,7 @@ En **Define Input Types** basta con ejecutar **Run** para que se ejecute el test
 
 ![Fixed-point](images/HDL_workflow_fixed_point1.png)
 
-En (1) se selecciona si la herramienta recomendará el tamaño en bits o la precisión en decimales. Si se conoce la precisión deseada en decimales (como en este ejemplo), se elige esa opción y se ajusta la cantidad de decimales considerando la fórmula: TODO poner la formula para pasar de fraction a bits. Luego se presiona **Analyze** (2) para que la herramienta analice los máximos y mínimos y recomiende los tamaños.
+En (1) se selecciona si la herramienta recomendará el tamaño en bits o la precisión en decimales. Si se conoce la precisión deseada en decimales, puede elegirse esa opción. Como aproximación práctica, si se desea conservar `d` decimales, la cantidad de bits fraccionales puede estimarse como `F ≈ ceil(d * log2(10))`; de forma equivalente, para `F` bits fraccionales se obtiene aproximadamente `d ≈ floor(F * log10(2))` decimales. Luego se presiona **Analyze** (2) para que la herramienta analice los máximos y mínimos y recomiende los tamaños.
 
 Una vez ejecutado, se mostrará lo siguiente:
 
@@ -137,7 +134,7 @@ Luego se ejecuta **Validate Types** en la parte superior. Cuando termine, se rec
 
 Esto generará un gráfico comparando las salidas del test original y del test con el diseño convertido a fixed-point. Permite detectar si hubo pérdida de información al pasar a punto fijo.
 
-![Fixed-point](images/HDL_workflow_fixed_point4png)
+![Fixed-point](images/HDL_workflow_fixed_point4.png)
 
 En el gráfico se aprecia un error del orden de 1e-2. En fixed-point la pérdida de precisión fraccional es habitual, pero al aumentar los bits dedicados a la fracción se reduce el orden de magnitud del error. En casos sin fracciones, fixed-point puede llegar a error 0.
 
@@ -328,7 +325,7 @@ Al ejecutar **Refresh List** debería aparecer la opción. Luego se presiona **R
 
 ![Verify HDL Testbench](images/HDL_workflow_cosimulation.png)
 
-Luego se pasa a **Verify with Cosimulation**. En esta simulación se activan las casillas y es fundamental analizar los plots que comparan las salidas. Existe la posibilidad de que, si el código MATLAB es difícil de traducir a HDL (malas prácticas u optimizaciones inadecuadas), las salidas difieran de forma significativa: TODO linkear el ejemplo. Un fallo en esta etapa implica volver a modificar el `.m` para hacerlo compatible con HDL Coder. Esta etapa no soporta `double` ni `single` (floating point).
+Luego se pasa a **Verify with Cosimulation**. En esta simulación se activan las casillas y es fundamental analizar los gráficos que comparan las salidas. Si el código MATLAB es difícil de traducir a HDL, ya sea por malas prácticas o por una estructura poco favorable para la síntesis, las salidas pueden diferir de forma significativa. Un fallo en esta etapa implica volver a modificar el archivo `.m` para hacerlo más compatible con HDL Coder. Esta etapa no soporta `double` ni `single` cuando se trabaja en flujo de cosimulación tradicional.
 
 ![Cosimulation](images/HDL_workflow_cosimulation2.png)
 
@@ -350,9 +347,7 @@ Al finalizar, se genera el siguiente gráfico:
 
 Al igual que en cosimulación, no se observa error para los datos usados como muestra. Con esto el proceso finaliza y se obtiene confianza en que, dentro del rango de prueba, el sistema HDL funciona correctamente. Sin embargo, no debe olvidarse que en fixed-point hubo una pérdida de precisión del orden de 1e-2. Esta pérdida no aparece en esta etapa final porque la comparación se realiza con la versión fixed-point y no con el test original.
 
-Con el flujo completado, se puede ir a `codegen/nameproyect/hdlsrc` y utilizar los archivos `.v` (o el lenguaje seleccionado). También es posible continuar en Simulink con **FIL Wizard** para probar nuevos valores de forma más sencilla y visual: ver la [guia fil](../HDL_Verifier/FIL/README.md).
-
-Para finalizar, se realizará una comparación entre la salida del test de MATLAB y la salida de la FPGA ya cargada con el bitstream del HDL. Esta etapa requiere tener configurada la conexión con la FPGA; la guía está en [guia fil](../HDL_Verifier/FIL/README.md).
+Con el flujo completado, se puede ir a `codegen/<nombre_proyecto>/hdlsrc` y utilizar los archivos `.v` (o el lenguaje seleccionado). También es posible continuar en Simulink con **FIL Wizard** para probar nuevos valores de forma más sencilla y visual; la configuración detallada se explica en la [guía FIL](../HDL_Verifier/FIL/README.md).
 
 ## Ejemplo MPC (caso complejo)
 
@@ -525,7 +520,7 @@ Se vuelve a la configuración de generación HDL y se activa **Stream loops**:
 
 ![Recursos MPC con Stream loops](images/HDL_mpc2.png)
 
-Se observa incluso mayor uso de recursos. Esto se debe a que la forma de escribir el código no facilita la optimización. Por ello se modificará el archivo `.m` sin cambiar su funcionalidad, empezando por `fx_qp_admm`.
+Se observa incluso mayor uso de recursos. Esto indica que la forma de escribir el código no está favoreciendo la optimización automática. Por ello se modificará el archivo `.m` sin cambiar su funcionalidad, comenzando por `fx_qp_admm`.
 
 Se detectan los siguientes problemas:
 - Se usa `persistent`, lo que dificulta el uso de recursos compartidos.
@@ -693,7 +688,7 @@ function [t] = fx_qp_admm(q, g, iters)
 end
 ```
 
-TODO este cambio es muy brusco buscar la manera de hacerlo mas ameno
+Para reducir el uso de recursos sin alterar la función matemática del algoritmo, la idea fue transformar una descripción muy compacta, pero difícil de optimizar, en una versión más explícita para HDL Coder. El cambio principal no está en el resultado del cálculo, sino en cómo se expresa el algoritmo para facilitar el uso de recursos compartidos.
 
 Se realizaron los siguientes cambios:
 
@@ -719,9 +714,9 @@ for k = 1:MAX_ITERS
     if k <= iters_eff
 ```
 
-Con esto `iters` deja de ser un valor variable para el hardware. El bucle se limita a `MAX_ITERS` y se evita que el compilador asuma cambios de iteracion durante la ejecucion. Ademas se usa la directiva `coder.hdl.loopspec('stream', N)`, lo que permite compartir recursos a cambio de ejecutar el bloque en `N` ciclos.
+Con esto, `iters` deja de ser un valor completamente variable para el hardware. El bucle se limita a `MAX_ITERS` y se evita que el compilador tenga que inferir una arquitectura demasiado flexible durante la ejecución. Además, se usa la directiva `coder.hdl.loopspec('stream', N)`, lo que permite compartir recursos a cambio de ejecutar el bloque en `N` ciclos.
 
-Tambien se descompusieron operaciones matriciales en bucles para facilitar el streaming. Por ejemplo, el calculo de `v_x`:
+También se descompusieron operaciones matriciales en bucles explícitos para facilitar el streaming. Por ejemplo, el cálculo de `v_x`:
 
 ```matlab
 % v_x = zk - g + uk   (24 iteraciones)
@@ -739,13 +734,13 @@ Con estas modificaciones, al generar HDL se obtiene el siguiente mensaje:
  ### MESSAGE: The design requires 100 times faster clock with respect to the base rate = 1.
 ```
 
-Esto indica que ahora se requieren 100 ciclos internos por cada entrada y que la salida queda desfasada un ciclo respecto al tiempo de muestreo de entrada.
+Esto indica que ahora se requieren hasta 100 ciclos internos por cada entrada, y que la salida queda desfasada un ciclo respecto del tiempo de muestreo de entrada.
 
 Resultados de recursos:
 
 ![Recursos MPC optimizado](images/HDL_mpc3.png)
 
-Se observa una reduccion importante de recursos, suficiente para que el diseño quepa en la FPGA. Aun se puede optimizar mas, ya que la funcion `mpc` tambien contiene calculos matriciales que pueden compartir recursos.
+Se observa una reducción importante de recursos, suficiente para que el diseño quepa en la FPGA. Aun así, todavía existe margen de optimización, ya que la función `mpc` también contiene cálculos matriciales que podrían reescribirse para compartir recursos.
 
 ## Verificacion de timing (post-FIL)
 
@@ -787,28 +782,32 @@ sysclk                {0.000 5.000}      10.000          100.000
   clkfbout_clk_wiz_0  {0.000 5.000}      10.000          100.000
 ```
 
-En este ejemplo, `clk_out1_clk_wiz_0` es el reloj interno del diseno y `TCK` es el reloj del wrapper que comunica la FPGA con MATLAB/Simulink. El valor `WNS = -45.561` indica que, para el reloj interno de 40 ns (25 MHz), el diseno aun necesita al menos 45.561 ns adicionales para cumplir la restriccion. En otras palabras, ese camino critico no llega a cerrar timing.
+En este ejemplo, `clk_out1_clk_wiz_0` es el reloj interno del diseño y `TCK` es el reloj del wrapper que comunica la FPGA con MATLAB/Simulink. El valor `WNS = -45.561` indica que, para el reloj interno de 40 ns (25 MHz), el diseño aún necesita al menos 45.561 ns adicionales para cumplir la restricción. En otras palabras, ese camino crítico no alcanza a cerrar timing.
 
-Es importante considerar que cada implementacion puede cambiar el timing segun la optimizacion que realice la herramienta (sintesis, mapeo y ruteo). Por eso, para analizar timing con mayor precision se recomienda implementar el HDL generado directamente en Vivado (o en la herramienta del fabricante correspondiente). Aun asi, revisar este reporte en el flujo FIL entrega una primera idea de cuan lejos o cerca esta el diseno del objetivo, y si es necesario ajustar el codigo `.m` o la configuracion de HDL Coder.
+Es importante considerar que cada implementación puede cambiar el timing según la optimización que realice la herramienta durante síntesis, mapeo y ruteo. Por eso, para analizar el timing con mayor precisión, se recomienda implementar el HDL generado directamente en Vivado, o en la herramienta del fabricante correspondiente. Aun así, revisar este reporte dentro del flujo FIL entrega una primera idea de cuán lejos o cerca está el diseño del objetivo, y si es necesario ajustar el código `.m` o la configuración de HDL Coder.
 
 ## Efecto del output delay en FIL
 
-Para evaluar si el output delay afecta el desempeno, conviene modelarlo explicitamente en Simulink. El siguiente diagrama representa el PID con anti-windup del ejemplo `PIDaw`, con un output delay de 1:
+Para evaluar si el output delay afecta el desempeño, conviene modelarlo explícitamente en Simulink. El siguiente diagrama representa el PID con anti-windup del ejemplo `PIDaw`, con un output delay de 1:
 
 ![PIDaw con output delay 1](images/pidaw_diagram.png)
 
-Si queremos visualizar como se veria con un output delay de 5, se puede representar asi:
+_(TODO: por subir imagen al repositorio)._
+
+Si se quiere visualizar cómo se vería con un output delay de 5, se puede representar así:
 
 ![PIDaw con output delay 5](images/pidaw_diagram2.png)
+
+_(TODO: por subir imagen al repositorio)._
 
 Cada bloque **Unit Delay** usa el mismo sample time que la entrada al bloque FIL, que en este caso es **1 ms**. Por lo tanto, un output delay de 5 implica **5 ciclos de latencia** desde la salida del controlador hasta la planta.
 
 Es clave separar **throughput** y **latencia**:
 
 - El throughput se mantiene en **1 ms**: la planta recibe una nueva muestra cada 1 ms.
-- La latencia aumenta a **5 ms**: un cambio en la salida del controlador se refleja en la entrada de la planta 5 ms despues.
+- La latencia aumenta a **5 ms**: un cambio en la salida del controlador se refleja en la entrada de la planta 5 ms después.
 
-Si el requisito del diseno es que un cambio en la salida se vea reflejado en la entrada de la planta en **1 ms**, entonces un output delay de 5 **no cumple** ese requisito, porque la planta recien ve el efecto a los **5 ms**.
+Si el requisito del diseño es que un cambio en la salida se vea reflejado en la entrada de la planta en **1 ms**, entonces un output delay de 5 **no cumple** ese requisito, porque la planta recién ve el efecto a los **5 ms**.
 
 ## Limitaciones y criterios de uso
 
