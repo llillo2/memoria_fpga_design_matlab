@@ -127,13 +127,21 @@ En **Define Input Types** basta con ejecutar **Run** para que se ejecute el test
 
 ![Fixed-point](images/HDL_workflow_fixed_point1.png)
 
-En (1) se selecciona si la herramienta recomendará el tamaño en bits o la precisión en decimales. Si se conoce la precisión deseada en decimales, puede elegirse esa opción. Como aproximación práctica, si se desea conservar `d` decimales, la cantidad de bits fraccionales puede estimarse como `F ≈ ceil(d * log2(10))`; de forma equivalente, para `F` bits fraccionales se obtiene aproximadamente `d ≈ floor(F * log10(2))` decimales. Luego se presiona **Analyze** (2) para que la herramienta analice los máximos y mínimos y recomiende los tamaños.
+En (1) se selecciona si la herramienta recomendará el tamaño en bits o la precisión en decimales. Si se conoce la precisión deseada en decimales, puede elegirse esa opción. Como aproximación práctica, si se desea conservar `d` decimales, la cantidad de bits fraccionales puede estimarse como `F ≈ ceil(d * log2(10))`; de forma equivalente, para `F` bits fraccionales se obtiene aproximadamente `d ≈ floor(F * log10(2))` decimales. Luego se presiona **Analyze** (2) para que la herramienta analice los máximos y mínimos observados durante la simulación y proponga los tamaños.
 
 Una vez ejecutado, se mostrará lo siguiente:
 
 ![Fixed-point](images/HDL_workflow_fixed_point2.png)
 
-Aquí se observa el mínimo y máximo de la simulación, tanto de entradas como de salida. Al ser un ejemplo básico no hay variables internas, por lo que se pasa directamente a la salida. Se seleccionó un tipo fixed `(1,30,14)`, que indica un valor con signo de 30 bits, de los cuales 14 se usan para la fracción.
+Aquí se observa el mínimo y máximo detectado durante la simulación, tanto en las entradas como en las salidas. En diseños más complejos también pueden aparecer variables internas. Este punto es importante: cuando se usa conversión a **fixed-point**, los tipos propuestos por la herramienta dependen directamente de los valores que vea durante el testbench. Es decir, si en la simulación una entrada solo tomó valores pequeños, HDL Coder puede proponer un ancho menor al realmente necesario para otros casos no probados.
+
+En la práctica, esto significa que el testbench no solo sirve para validar funcionalmente el algoritmo: también influye en los rangos que la herramienta usa para recomendar el número de bits de entradas, salidas y variables internas. Si después el hardware se utiliza con valores mayores a los observados en la simulación, pueden aparecer saturaciones, desbordamientos o pérdida de información, aunque el diseño haya funcionado correctamente durante el análisis inicial.
+
+Por eso, el testbench debe ser lo más representativo posible del caso real. Si se sospecha que en operación habrá valores más grandes, más pequeños o con mayor precisión fraccional que los usados en el test, esos casos deben incluirse antes de aceptar los tipos recomendados.
+
+De todas formas, los tipos no quedan fijados obligatoriamente por el testbench. En la columna **Proposed Type** es posible modificar manualmente el tipo sugerido y forzar el ancho que se desee para cada señal. El formato es `numerictype(signo, bits_totales, bits_fraccionales)`. Por ejemplo, `numerictype(1,30,14)` corresponde a un valor con signo, de 30 bits totales, de los cuales 14 se usan para la parte fraccional. Si `signo = 1`, el tipo es con signo; si `signo = 0`, es sin signo.
+
+En este ejemplo se seleccionó un tipo fixed `(1,30,14)`, que indica un valor con signo de 30 bits, de los cuales 14 se usan para la fracción.
 
 Luego se ejecuta **Validate Types** en la parte superior. Cuando termine, se recomienda ejecutar **Test Numerics** con las siguientes opciones:
 
