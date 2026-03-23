@@ -149,7 +149,7 @@ Luego se ejecuta **Validate Types** en la parte superior. Cuando termine, se rec
 
 Esto generará un gráfico comparando las salidas del test original y del test con el diseño convertido a fixed-point. Permite detectar si hubo pérdida de información al pasar a punto fijo.
 
-![Fixed-point](images/HDL_workflow_fixed_point4.png)
+![Fixed-point](images/HDL_workflow_fixed_point4png.png)
 
 En el gráfico se aprecia un error del orden de 1e-2. En fixed-point la pérdida de precisión fraccional es habitual, pero al aumentar los bits dedicados a la fracción se reduce el orden de magnitud del error. En casos sin fracciones, fixed-point puede llegar a error 0.
 
