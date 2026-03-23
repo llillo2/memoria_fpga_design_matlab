@@ -28,7 +28,7 @@ A continuación, se presenta un **diagrama de flujo** que indica la **secuencia 
 En las secciones posteriores del documento, **cada uno de los puntos del diagrama será explicado en detalle**, justificando su propósito dentro del flujo de diseño y describiendo las razones por las cuales se recomienda seguir dicha secuencia para obtener implementaciones más eficientes, verificables y mantenibles.
 
 
-![Diagrama de flujo ](images/diagrama_de_flujo.svg)
+![Diagrama de flujo ](images/Diagram_V4.svg)
 
 Tal como se muestra en el diagrama, es necesario contar inicialmente con un **diseño en MATLAB o Simulink acompañado de un test exhaustivo del sistema**, con el fin de verificar su correcto funcionamiento antes de avanzar hacia etapas posteriores del flujo de diseño en hardware.
 
@@ -49,6 +49,10 @@ Una vez definido el algoritmo, es fundamental testearlo con una gran variedad de
 Si el hardware generado es posteriormente utilizado con valores que provoquen acumulaciones mayores o magnitudes superiores a las consideradas durante el test inicial —ya sea en las entradas o en variables internas— pueden aparecer errores por desbordamiento o pérdida de información debido a saturación. Por este motivo, un test amplio y representativo resulta crítico.
 
 A continuación, se presenta un ejemplo de test que genera múltiples casos aleatorios:
+
+<details>
+<summary>Ver test completo del producto punto</summary>
+
 ```
 % test_producto_punto_vectores.m
 % Test: 1000 casos aleatorios para producto_punto_vectores
@@ -77,6 +81,9 @@ end
 % Guardar a archivo .mat
 save('golden_reference_producto_punto.mat', 'golden');
 ```
+
+</details>
+
 Tal como se observa en el código, además de realizar el test del algoritmo, se recomienda almacenar los valores de entrada y salida. De esta manera, si posteriormente se desea probar la implementación en Simulink bajo las mismas condiciones, se dispone de una referencia guardada en un archivo .mat, que puede utilizarse directamente mediante el bloque From Workspace. Esto facilita la validación cruzada entre MATLAB, Simulink y el HDL generado.
 
 ## Workflow Advisor: configuración y generación de HDL
@@ -355,6 +362,9 @@ El ejemplo anterior ocurrió sin inconvenientes. A continuación se muestra un c
 
 Para este MPC se tienen dos funciones y un test:
 
+<details>
+<summary>Ver código original del caso MPC</summary>
+
 ```matlab
 %% QP SOLVER - ADMM
 % ===============================================================================
@@ -508,6 +518,8 @@ grid on
 legend('Referencia r', 'Estado x0', 'Estado x1', 'Entrada u')
 ```
 
+</details>
+
 Este diseño no contiene funciones incompatibles con HDL Coder, pero su forma de descripción dificulta la optimización y puede generar un HDL no óptimo, con errores o excesivo uso de recursos.
 
 Se replica el procedimiento del Workflow Advisor con la misma configuración del ejemplo anterior, sin usar optimización de **Stream loops**. Una vez generado el HDL, se observan los siguientes recursos:
@@ -528,6 +540,9 @@ Se detectan los siguientes problemas:
 - Se usan muchas multiplicaciones en operaciones matriciales; si la herramienta no logra compartir recursos, debe hacerse manualmente.
 
 Se propone la siguiente versión de `fx_qp_admm`:
+
+<details>
+<summary>Ver versión reescrita de <code>fx_qp_admm</code></summary>
 
 ```matlab
 %% QP SOLVER - ADMM
@@ -688,11 +703,16 @@ function [t] = fx_qp_admm(q, g, iters)
 end
 ```
 
+</details>
+
 Para reducir el uso de recursos sin alterar la función matemática del algoritmo, la idea fue transformar una descripción muy compacta, pero difícil de optimizar, en una versión más explícita para HDL Coder. El cambio principal no está en el resultado del cálculo, sino en cómo se expresa el algoritmo para facilitar el uso de recursos compartidos.
 
 Se realizaron los siguientes cambios:
 
 En el `for` de iteraciones ahora se usa un maximo fijo:
+
+<details>
+<summary>Ver fragmentos clave de la reescritura</summary>
 
 ```matlab
 MAX_ITERS = coder.const(100);  % limite fijo para el hardware
@@ -725,6 +745,8 @@ for i = 1:24
     v_x(i) = zk(i) - g(i) + uk(i);
 end
 ```
+
+</details>
 
 Con estas modificaciones, al generar HDL se obtiene el siguiente mensaje:
 
