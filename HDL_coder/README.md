@@ -538,6 +538,7 @@ Se detectan los siguientes problemas:
 - Se usa `persistent`, lo que dificulta el uso de recursos compartidos.
 - Se usa una variable como cantidad de iteraciones.
 - Se usan muchas multiplicaciones en operaciones matriciales; si la herramienta no logra compartir recursos, debe hacerse manualmente.
+- Se tienen bucles `for` anidados, lo que también dificulta aplicar `stream`. Según la documentación de MathWorks, `HDL Coder` no puede aplicar `coder.hdl.loopspec('stream')` a un bucle anidado dentro de otro bucle, y además existen restricciones adicionales cuando hay varios bucles anidados al mismo nivel. Referencias: [Optimize MATLAB Loops](https://www.mathworks.com/help/hdlcoder/ug/loop-optimization-1.html) y [Why does Loop Streaming not work for my nested loop when generating HDL Code?](https://www.mathworks.com/matlabcentral/answers/422988-why-does-loop-streaming-not-work-for-my-nested-loop-when-generating-hdl-code).
 
 Se propone la siguiente versión de `fx_qp_admm`:
 
