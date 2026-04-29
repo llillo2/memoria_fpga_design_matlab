@@ -1,0 +1,5 @@
+set_property SRC_FILE_INFO {cfile:C:/Users/llillo/Desktop/cosas_ordenadas/uni/memoria/fcc/HDL_original/Gold_Ref_22_14/fcc_fixpt_fil/filsrc/fcc_fixpt_fil.xdc rfile:../../../../filsrc/fcc_fixpt_fil.xdc id:1} [current_design]
+set_property src_info {type:XDC file:1 line:2 export:INPUT save:INPUT read:READ} [current_design]
+set_property PACKAGE_PIN E3 [get_ports sysclk]
+set_property src_info {type:XDC file:1 line:5 export:INPUT save:INPUT read:READ} [current_design]
+set_clock_groups -asynchronous -group TCK -group [get_clocks -include_generated_clocks clk_out1_clk_wiz_0]

@@ -1,0 +1,14 @@
+#-----------------------------------------------------------
+# Vivado v2023.1 (64-bit)
+# SW Build 3865809 on Sun May  7 15:05:29 MDT 2023
+# IP Build 3864474 on Sun May  7 20:36:21 MDT 2023
+# SharedData Build 3865790 on Sun May 07 13:33:03 MDT 2023
+# Start of session at: Mon Dec  1 16:52:55 2025
+# Process ID: 11484
+# Current directory: C:/Users/llillo/Desktop/cosas_ordenadas/uni/memoria/fcc/HDL_original/Gold_Ref_22_14
+# Command line: vivado.exe -mode batch -source _vivado_program.cmd
+# Log file: C:/Users/llillo/Desktop/cosas_ordenadas/uni/memoria/fcc/HDL_original/Gold_Ref_22_14/vivado.log
+# Journal file: C:/Users/llillo/Desktop/cosas_ordenadas/uni/memoria/fcc/HDL_original/Gold_Ref_22_14\vivado.jou
+# Running On: DESKTOP-2HRT285, OS: Windows, CPU Frequency: 3302 MHz, CPU Physical cores: 4, Host memory: 34160 MB
+#-----------------------------------------------------------
+source _vivado_program.cmd
