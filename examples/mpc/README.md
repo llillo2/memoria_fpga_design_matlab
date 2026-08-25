@@ -8,6 +8,11 @@ Implementar un controlador predictivo basado en una formulación densa y un solv
 
 ## Diseño base en MATLAB
 
+El ejemplo se apoya en dos funciones MATLAB:
+
+- `mpc.m`, que construye el problema de control predictivo.
+- `fx_qp_admm.m`, que resuelve el problema QP mediante ADMM.
+
 La función principal del controlador es `mpc.m`:
 
 ```matlab
@@ -41,6 +46,40 @@ g = [c; -d; e - D * xk; D * xk - f];
 t_ADMM = fx_qp_admm(q, g, IT_ADMM);
 uk = t_ADMM(1:M_SYS) + uinf;
 
+end
+```
+
+La versión original del solver `fx_qp_admm` usado por el controlador era la siguiente:
+
+```matlab
+function [t] = fx_qp_admm(q, g, iters)
+
+N_SYS = 2;
+M_SYS = 1;
+N_HOR = 4;
+
+N_QP = N_HOR * M_SYS;
+M_QP = 2 * N_HOR * (N_SYS + M_SYS);
+
+G = [...];
+R_inv = [...];
+P = [...];
+
+persistent tk zk uk
+
+if isempty(tk)
+    tk = zeros(N_QP, 1, 'single');
+    zk = zeros(M_QP, 1, 'single');
+    uk = zeros(M_QP, 1, 'single');
+end
+
+for k = 1:iters
+    v_x = zk - g + uk;
+    tk = R_inv * (P * v_x - q);
+    zk = max(0, -G * tk - uk + g);
+    uk = uk + (G * tk + zk - g);
+end
+t = tk;
 end
 ```
 
@@ -348,6 +387,16 @@ El reporte de recursos mejora de forma importante:
 ![Recursos MPC optimizado](../../HDL_coder/images/HDL_mpc3.png)
 
 La reducción es suficiente para que el diseño sea mucho más viable en FPGA. Aun así, todavía existe margen adicional de optimización, porque la función `mpc` mantiene operaciones matriciales que también podrían reescribirse con el mismo criterio.
+
+## Cosimulación MATLAB y FPGA
+
+La validación se realiza ejecutando en paralelo el controlador MPC simulado en MATLAB y su implementación en FPGA. Ambos controladores reciben la misma referencia y sus salidas se comparan junto con la respuesta de la planta.
+
+![Diagrama de cosimulación paralela del MPC en MATLAB y FPGA](images/diagrama.jpg)
+
+El siguiente gráfico muestra la respuesta de ambas implementaciones. La coincidencia entre la salida de MATLAB y la obtenida desde la FPGA permite verificar el comportamiento del controlador generado.
+
+![Comparación de resultados del MPC en MATLAB y FPGA](images/grafico_resultado.jpg)
 
 ## Verificación de timing
 
