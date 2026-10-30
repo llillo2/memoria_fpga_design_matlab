@@ -1,16 +1,8 @@
-# PID con Anti-Windup en Simulink, HDL Coder y FIL
+# PID con anti-windup en Simulink, HDL Coder y FPGA-in-the-Loop
 
-En este ejemplo se ilustra el diseno e implementacion de un controlador PID con
-anti-windup en MATLAB/Simulink y el flujo de conversion a HDL con HDL Coder. El
-diseno del PID considera todos sus parametros como entradas editables desde
-fuera. Luego, usando HDL Verifier, se busca probar en FPGA el diseno del PID con
-anti-windup dentro de un lazo cerrado en Simulink para una planta generica,
-analizando el comportamiento ante cambios de ajuste sin depender de software
-adicional.
+Este ejemplo presenta el diseño de un controlador PID discreto con anti-windup en MATLAB/Simulink y su conversión a HDL mediante HDL Coder. Las ganancias proporcional, integral, derivativa y de anti-windup son entradas externas, por lo que pueden ajustarse sin modificar la estructura del controlador.
 
-Ademas, se documenta la estructura discreta del PID, su implementacion en
-Simulink y los pasos minimos para convertir el subsystem a HDL y validarlo en
-un esquema FPGA-in-the-Loop.
+Mediante HDL Verifier se valida el controlador en una FPGA usando FPGA-in-the-Loop (FIL), con una planta en lazo cerrado en Simulink. Esto permite comparar su respuesta con la del modelo de Simulink ante cambios de referencia, saturación del actuador y ajustes de parámetros.
 
 ## Requisitos
 
@@ -19,110 +11,107 @@ un esquema FPGA-in-the-Loop.
 - HDL Verifier
 - Vivado `2023.1`
 
-## Quick Start
+## Inicio rápido
 
 1. Abrir el modelo `PID_antiwidup.slx` en MATLAB.
-2. Verificar que el controlador use datos en punto fijo `fixdt(1,32,26)` en
-   entradas y señales principales.
-3. Ejecutar la simulacion del lazo cerrado en Simulink.
-4. Generar HDL del subsystem del PID con HDL Coder.
-5. Crear el bloque FIL con HDL Verifier y configurar la compilacion en Vivado
-   `2023.1`.
-6. Ejecutar la co-simulacion FPGA-in-the-Loop y comparar la respuesta con la
-   simulacion base de Simulink.
+2. Verificar que el controlador utilice tipos de datos en punto fijo `fixdt(1,64,26)` en entradas y señales principales.
+3. Ejecutar la simulación del lazo cerrado en Simulink.
+4. Generar el HDL del subsistema PID con HDL Coder.
+5. Crear el bloque FIL con HDL Verifier y configurar la compilación en Vivado `2023.1`.
+6. Ejecutar la co-simulación FPGA-in-the-Loop y comparar la respuesta con la simulación base.
 
+## Estructura del controlador
 
-En esta etapa se modela un PID con anti-windup en tiempo discreto. El error se
-define como e[k] y la salida del controlador como u[k]. La estructura considera
-parte proporcional, integral con anti-windup y derivativa.
+El controlador emplea anti-windup por retrocálculo y calcula la acción derivativa a partir de la medición de la planta. El error es $e[k]=r[k]-y[k]$, donde $r[k]$ es la referencia e $y[k]$ la salida medida. El período de muestreo es $T_s=10^{-4}\,\mathrm{s}$, equivalente a una frecuencia de 10 kHz.
 
-## Parte proporcional
+### Parte proporcional
 
-La parte proporcional se implementa en el bloque `Proporcional_gain`:
+El bloque `Proporcional_gain` multiplica el error por la ganancia proporcional:
 
 $$
 P[k] = K_p \cdot e[k]
 $$
 
-Responde de forma inmediata al error actual y no tiene memoria.
+Este término responde de forma inmediata al error actual y no introduce memoria en el sistema.
 
-## Parte integral con anti-windup
+### Parte integral con anti-windup
 
-La parte integral se implementa en el bloque `I_component` con los terminos de
-ganancia integral y anti-windup:
+El bloque `I_component` acumula el error e incorpora la corrección por anti-windup:
 
 $$
 I[k] = I[k-1] + (K_i e[k] + K_{aw} (u_{sat}[k] - u[k])) T_s
 $$
 
-El termino de anti-windup reduce la acumulacion cuando la salida esta saturada.
+Aquí $u[k]$ es la salida del controlador y $u_{sat}[k]$ la señal aplicada por el actuador. La diferencia entre ambas corrige la acumulación integral durante la saturación. `Unit Delay 1` almacena el valor anterior de la integral.
 
-## Parte derivativa
+### Parte derivativa
 
-La parte derivativa se implementa en el bloque `D_component`:
-
-$$
-D[k] = K_d T_s (e[k] - e[k-1])
-$$
-
-Aporta amortiguamiento y anticipa cambios rapidos del error.
-
-## Suma final y saturacion
-
-La salida del PID se obtiene como:
+El bloque `D_component` calcula la derivada negativa de la medición. Como la ganancia $K_d$ es una entrada externa y se multiplica por la medición antes del retardo, la expresión general es:
 
 $$
-u[k] = P[k] + I[k] + D[k]
+D[k] = \frac{K_d[k-1]y[k-1] - K_d[k]y[k]}{T_s}
 $$
 
-Luego se aplica la saturacion para obtener $u_{sat}[k]$ y se realimenta la
-diferencia $u_{sat}[k] - u[k]$ al integrador.
+Para una ganancia derivativa constante, se reduce a:
 
-Modelo PID con anti-windup en Simulink.
+$$
+D[k] = -K_d\frac{y[k]-y[k-1]}{T_s} = -10^4 K_d\left(y[k]-y[k-1]\right)
+$$
 
-![Modelo PID con anti-windup en Simulink.](images/Diagram_PIDaw_simulink.png)
+Esta estructura evita el impulso derivativo causado directamente por un cambio brusco de referencia. Un cambio brusco de $K_d$ también puede producir un transitorio, porque `Unit Delay 2` almacena el producto anterior de la ganancia y la medición.
 
-Para la implementacion en HDL, es necesario que todas las entradas y modulos
-trabajen con tipos de datos enteros o de punto fijo (`int`, `fixdt` o
-`logical`). En este caso se usara `fixdt(1,32,26)` para las entradas, y para
-los sumadores y multiplicadores se utiliza `fixdt(1,36,26)`. Esto significa que
-se usan 36 - 26 = 10 bits para la parte entera y 26 bits de precision para la
-parte decimal, lo cual es adecuado porque el voltaje no suele tomar valores
-altos y se requiere mas detalle fraccional.
+### Suma final y saturación
 
-Ademas, se habilita la opcion `Saturate on overflow` para que, si el resultado
-supera el limite inferior o superior, quede limitado en ese valor y no ocurra
-un desbordamiento que invierta el signo o produzca saltos no deseados.
+Las tres componentes se suman para obtener la señal previa al retardo de salida:
 
-Tambien es necesario que, para usar HDL Coder, todos los bloques sean
-compatibles con el flujo de generacion. En particular, las sumas y
-multiplicaciones deben operar con tipos de datos enteros o de punto fijo, como
-`int`, `fixdt` o equivalentes, para evitar conversiones no soportadas.
+$$
+v[k] = P[k] + I[k] + D[k]
+$$
 
-Configuracion de tipos de datos y saturacion en sumadores.
+El bloque `Unit Delay 3` introduce un retardo de una muestra, de modo que $u[k]=v[k-1]$. La salida pasa por el actuador saturado:
 
-![Configuracion de tipos de datos y saturacion en sumadores.](images/adder_conf.png)
+$$
+u_{sat}[k] = \min\left(u_{max},\max\left(u_{min},u[k]\right)\right)
+$$
 
-Configuracion de tipos de datos y saturacion en multiplicadores.
+La diferencia $u_{sat}[k]-u[k]$ se realimenta al integrador para el anti-windup. El retardo de salida debe considerarse al comparar las respuestas en Simulink y FIL.
 
-![Configuracion de tipos de datos y saturacion en multiplicadores.](images/mult_conf.png)
+Modelo PID con anti-windup en Simulink:
 
-Configuracion de tipos de datos y saturacion en bloques aritmeticos.
+![Modelo PID con anti-windup en Simulink.](images/diagrama_pidaw.png)
 
-Subsystem del PID en Simulink.
+## Implementación en punto fijo
 
-![Subsystem del PID en Simulink.](images/bloque_pid_simulink.png)
+Para la generación de HDL es necesario que todas las entradas y bloques aritméticos trabajen con tipos enteros o de punto fijo (`int`, `fixdt` o `logical`). En este ejemplo se utilizan:
 
-Teniendo el Subsystem del controlador PID pasamos a crearle un lazo cerrado
-para las pruebas.
+- `fixdt(1,64,26)` para entradas y señales principales.
+- `fixdt(1,36,26)` para sumadores y multiplicadores.
 
-Lazo cerrado en Simulink con actuador y planta.
+Esto deja 10 bits para la parte entera y 26 bits para la parte fraccionaria, una distribución razonable para señales de control con amplitud moderada y necesidad de buena resolución decimal.
 
-![Lazo cerrado en Simulink con actuador y planta.](images/Diagram_lazo_cerrado_simulink.png)
+También se habilita la opción `Saturate on overflow` para evitar desbordamientos que alteren el signo o introduzcan saltos no deseados en la dinámica del controlador.
 
-Para validar el controlador se disena un lazo cerrado simple donde el actuador
-se modela con una saturacion de $\pm 10$ y la planta con la funcion de
-transferencia:
+Configuración de tipos de datos y saturación en sumadores:
+
+![Configuración de tipos de datos y saturación en sumadores.](images/adder_conf.png)
+
+Configuración de tipos de datos y saturación en multiplicadores:
+
+![Configuración de tipos de datos y saturación en multiplicadores.](images/mult_conf.png)
+
+Subsystem del PID en Simulink:
+
+![Subsystem del PID en Simulink.](images/bloque.png)
+
+## Lazo cerrado de validación
+
+Una vez definido el subsistema del controlador, se construye un lazo cerrado para evaluar su respuesta.
+
+Lazo cerrado en Simulink con actuador y planta:
+
+![Lazo cerrado en Simulink con actuador y planta.](images/diagram_lazo_cerrad.png)
+
+El actuador se modela mediante una saturación de $\pm 10$ y la planta mediante la función de transferencia:
 
 $$
 G(s) = \frac{10}{s^2 + 2s + 10}
@@ -130,153 +119,88 @@ $$
 
 Consideraciones principales:
 
-- El PID diseñado es discreto, por lo que las entradas deben discretizarse
-  usando un `Zero-Order Hold` el cual debe ser el mismo que Ts en este caso
-  1e-4.
-- Las entradas se manejan con `fixdt(1,32,26)`, por lo que se usa un bloque
-  `Data Type Conversion` antes del controlador dado que simulink trabaja
-  nativamente con Double en punto flotante.
-- Entre el sistema discretizado y la planta continua se usa un `Zero-Order
-  Hold` y un `Data Type Conversion` a `double`; esto simula un DAC.
-- En la retroalimentacion de la planta hacia el controlador se usa un
-  `Zero-Order Hold` y una conversion de `double` a `fixdt(1,32,26)`; esto simula
-  un ADC.
-- Para la conexion de la salida del actuador con el controlador se usa un
-  bloque `Conversion` y un `Zero-Order Hold`.
+- El PID es discreto, por lo que las entradas deben discretizarse con un `Zero-Order Hold` cuyo período sea igual a `Ts = 1e-4`.
+- Como Simulink opera de forma nativa en `double`, se utiliza un bloque `Data Type Conversion` antes del controlador para convertir a `fixdt(1,64,26)`.
+- Entre el sistema discreto y la planta continua se usa un `Zero-Order Hold` y una conversión a `double`, emulando un DAC.
+- En la realimentación de la planta hacia el controlador se usa un `Zero-Order Hold` y una conversión de `double` a `fixdt(1,64,26)`, emulando un ADC.
+- La salida del actuador también se adapta mediante bloques de conversión y retención para mantener consistencia temporal y de tipo.
 
-Para el controlador se usaron los parametros $K_p = 2$, $K_i = 1.5$,
-$K_d = 0.5$, $K_{aw} = 2$ y $T_s = 1 \times 10^{-4}$. Con esta configuracion se
-obtiene la siguiente respuesta en un lapso de 15 segundos, usando una senal de
-referencia de 2 que sube despues del segundo 2.
+Para el controlador se emplean los parámetros $K_p = 2$, $K_i = 6$, $K_d = 1$, $K_{aw} = 2$ y $T_s = 1 \times 10^{-4}$. Con esta configuración se obtiene la siguiente respuesta en 15 segundos, usando una referencia de amplitud 2 aplicada después del segundo 2.
 
-Respuesta del control PID con anti-windup en Simulink.
+Respuesta del control PID con anti-windup en Simulink:
 
 ![Respuesta del control PID con anti-windup en Simulink.](images/grafico_control_ejemplo_simulink.png)
 
-El siguiente paso es pasar el diseno creado en Simulink a HDL usando el flujo
-de HDL Coder.
+## Generación de HDL
 
+El siguiente paso consiste en traducir el diseño de Simulink a HDL mediante el flujo de HDL Coder.
 
-En Simulink se podria generar HDL usando punto flotante (los datos que
-MATLAB/Simulink emplean por defecto), pero esto consume muchos mas recursos en
-la FPGA y requiere mas ciclos para funcionar. En este ejemplo se utilizo punto
-fijo; aun asi, se adjunta la configuracion para punto flotante y una comparacion
-de utilizacion.
+Aunque Simulink permite generar HDL a partir de tipos de punto flotante, esa opción suele consumir muchos más recursos y requerir más ciclos en FPGA. Por esa razón, el ejemplo principal se desarrolla en punto fijo. Aun así, se incluye una comparación con una configuración en punto flotante.
 
-Para usar punto flotante se abre `HDL Coder` desde la seccion de Apps y se entra
-a la configuracion. En `Global settings` se debe colocar un `oversampling` mayor
-al valor por defecto (1), por ejemplo 100, aunque en este caso se requiere
-alrededor de 78. Ademas, en la configuracion se activa la casilla `Use floating
-point`.
+Para usar punto flotante se abre `HDL Coder` desde `Apps`, se entra a la configuración global y se ajustan los siguientes parámetros:
 
-Configuracion de oversampling en HDL Coder.
+- En `Global settings`, aumentar el `oversampling` por encima del valor por defecto. En este caso se utiliza 100, aunque el diseño requiere aproximadamente 78.
+- Activar `Use floating point`.
 
-![Configuracion de oversampling en HDL Coder.](images/conf_float_point1.png)
+Configuración de oversampling en HDL Coder:
 
-Habilitacion de punto flotante.
+![Configuración de oversampling en HDL Coder.](images/conf_float_point1.png)
 
-![Habilitacion de punto flotante.](images/conf_float_point.png)
+Habilitación de punto flotante:
 
-Configuracion para generacion en punto flotante.
+![Habilitación de punto flotante.](images/conf_float_point.png)
 
-Como ejemplo, se muestra la diferencia de utilizacion de recursos entre punto
-fijo y punto flotante.
+## Comparación entre punto fijo y punto flotante
 
-Utilizacion con punto fijo.
+Como referencia, se muestra la diferencia de utilización de recursos entre ambas implementaciones.
 
-![Utilizacion con punto fijo.](images/utilization_fixed_point.png)
+Utilización con punto fijo:
 
-Utilizacion con punto flotante.
+![Utilización con punto fijo.](images/utilization_fixed_point.png)
 
-![Utilizacion con punto flotante.](images/utilization_float_point.png)
+Utilización con punto flotante:
 
-Comparacion de recursos entre punto fijo y punto flotante.
+![Utilización con punto flotante.](images/utilization_float_point.png)
 
-La utilizacion de recursos en punto flotante es mucho mayor que en punto fijo.
-Para generar en punto flotante, todos los bloques deben trabajar con tipos
-`single` o `double`. En cambio, para que el diseno sea compatible con punto
-fijo, todos los bloques deben usar tipos enteros o de punto fijo, como `int`,
-`fixdt`, `fi` o `logical`.
+La implementación en punto flotante demanda significativamente más recursos que la versión en punto fijo. Para generar HDL con punto flotante, todos los bloques deben trabajar en `single` o `double`. Para una implementación en punto fijo, todos los bloques deben ser compatibles con tipos enteros o fijos como `int`, `fixdt`, `fi` o `logical`.
 
-Subsystem creado para la generacion de HDL.
+Subsystem creado para la generación de HDL:
 
-![Subsystem creado para la generacion de HDL.](images/gen_HDL_from_simulink.png)
+![Subsystem creado para la generación de HDL.](images/gen_HDL_from_simulink.png)
 
-Este paso crea el archivo HDL en la carpeta del proyecto, en
-`hdlsrc/ProjectName/Nombre_Bloque.vhd` (o `.v` segun la opcion seleccionada).
+Este paso genera los archivos HDL en la carpeta del proyecto, normalmente en `hdlsrc/ProjectName/Nombre_Bloque.vhd` o `.v`, según el lenguaje configurado.
 
-Luego, usando el FIL Wizard con una configuracion estandar (sin ajustes
-avanzados), como se representa en la siguiente figura, se obtiene el bloque FIL
-para este PID.
+## Generación del bloque FIL
 
-Bloque FIL generado para el PID.
+Una vez generado el HDL, se utiliza `FIL Wizard` con una configuración estándar para crear el bloque FIL del PID.
+
+Bloque FIL generado para el PID:
 
 ![Bloque FIL generado para el PID.](images/bloque_pid_FIL.png)
 
-Con el bloque FIL se replica el diagrama de lazo cerrado con los mismos
-parametros, y se ejecuta la co-simulacion para observar los resultados.
+Con ese bloque se reconstruye el lazo cerrado usando la misma parametrización que en la simulación base.
 
-Lazo cerrado con bloque FIL en co-simulacion.
+Lazo cerrado con bloque FIL en co-simulación:
 
-![Lazo cerrado con bloque FIL en co-simulacion.](images/Diagram_lazo_cerrado_cosimulation.png)
+![Lazo cerrado con bloque FIL en co-simulación.](images/Diagram_lazo_cerrado_cosimulation.png)
 
-Se obtiene la salida de la planta y la salida del controlador, como se muestra a
-continuacion.
+## Resultados de co-simulación
 
-Salida de la planta (control).
+Se compara la salida de la planta en la simulación de Simulink con la obtenida al ejecutar el controlador en la FPGA mediante FIL. Ambas respuestas permiten evaluar la consistencia del comportamiento del controlador en lazo cerrado.
 
-![Salida de la planta (control).](images/grafico_control_cosimulation.png)
+![Comparación de la salida de la planta en Simulink y FPGA-in-the-Loop.](images/comparacion_ambasjuntas.png)
 
-Salida del controlador PID.
+Las salidas de la planta para el controlador en Simulink y el controlador en FPGA coinciden, con error cero en la comparación realizada.
 
-![Salida del controlador PID.](images/grafico_PID_cosimulation.png)
+## Conclusiones y consejos prácticos
 
-Resultados de co-simulacion del lazo cerrado.
+El ejemplo recorre el flujo desde un controlador discreto en Simulink hasta su ejecución en FPGA mediante HDL Coder y HDL Verifier. Para las condiciones evaluadas, la comparación de la salida de la planta mostró error cero entre Simulink y FIL. Este resultado corresponde a la prueba presentada y conviene repetirlo si se modifica el modelo o la configuración.
 
-Para demostrar la funcionalidad del anti-windup se realiza una prueba de
-seguimiento de referencia a 10 (la saturacion del controlador es de +10 a -10).
-Se obtienen los siguientes graficos:
+Para reproducir la comparación:
 
-Salida del PID.
+- Usar la misma referencia, planta, límites del actuador y ganancias en ambos lazos.
+- Mantener coherentes el período de muestreo, los tipos de datos y las conversiones entre Simulink y el bloque FIL. Considerar también el retardo de una muestra del controlador.
+- Si se modifica el subsistema del controlador, regenerar el HDL y el bloque FIL para que la FPGA ejecute la versión actualizada.
+- Comparar las señales con la misma escala y alineación temporal, y revisar la señal de error además de las curvas de salida.
 
-![Salida del PID.](images/grafico_PID_cosimulation_ref_10.png)
-
-Salida del actuador.
-
-![Salida del actuador.](images/grafico_Actuador_cosimulation_ref_10.png)
-
-Salida de la planta.
-
-![Salida de la planta.](images/grafico_control_cosimulation_ref_10.png)
-
-Respuesta en co-simulacion con referencia 10.
-
-Luego se modifica la ganancia de anti-windup a 1 para que tenga un efecto minimo
-y se obtienen los siguientes resultados con referencia a 10:
-
-Salida de la planta.
-
-![Salida de la planta.](images/grafico_control_cosimulation_ref_10_wp1.png)
-
-Salida del actuador.
-
-![Salida del actuador.](images/grafico_Actuador_cosimulation_ref_10_aw1.png)
-
-Salida del PID.
-
-![Salida del PID.](images/grafico_PID_cosimulation_ref_10_wp1.png)
-
-Resultados con anti-windup reducido y referencia 10.
-
-En la salida de la planta se observa un sobreimpulso mayor que 10. En un sistema
-real, si el limite es 10 (por espacio, capacidad electrica, angulo, temperatura
-u otra restriccion), superar ese valor puede afectar gravemente el
-funcionamiento. En este caso el anti-windup cumple una funcion fundamental al
-reducir el sobreimpulso y evitar que se exceda el limite. Aumentar el valor del
-anti-windup disminuye aun mas el sobreimpulso, pero a cambio hace que la
-respuesta sea mas lenta.
-
-Con esto terminado se ha podido verificar el funcionamiento en FPGA de un
-controlador PID con anti-windup, con todos sus parametros editables desde
-fuera, usando las herramientas MATLAB HDL Verifier y HDL Coder, manteniendo
-coherencia entre la simulacion en Simulink y la ejecucion FPGA-in-the-Loop.
+Las guías de `HDL_coder/` y `HDL_Verifier/FIL/` del repositorio complementan este ejemplo con detalles sobre generación HDL y verificación en FPGA.
