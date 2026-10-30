@@ -11,15 +11,6 @@ Mediante HDL Verifier se valida el controlador en una FPGA usando FPGA-in-the-Lo
 - HDL Verifier
 - Vivado `2023.1`
 
-## Inicio rápido
-
-1. Abrir el modelo `PID_antiwidup.slx` en MATLAB.
-2. Verificar que las entradas y señales del controlador utilicen el tipo de punto fijo `fixdt(1,64,26)`.
-3. Ejecutar la simulación del lazo cerrado en Simulink.
-4. Generar el HDL del subsistema PID con HDL Coder.
-5. Crear el bloque FIL con HDL Verifier y configurar la compilación en Vivado `2023.1`.
-6. Ejecutar la co-simulación FPGA-in-the-Loop y comparar la respuesta con la simulación base.
-
 ## Estructura del controlador
 
 El controlador emplea anti-windup por retrocálculo y calcula la acción derivativa a partir de la medición de la planta. El error es $e[k]=r[k]-y[k]$, donde $r[k]$ es la referencia e $y[k]$ la salida medida. El período de muestreo es $T_s=10^{-4}\,\mathrm{s}$, equivalente a una frecuencia de 10 kHz.
