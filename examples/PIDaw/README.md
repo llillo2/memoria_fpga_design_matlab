@@ -14,7 +14,7 @@ Mediante HDL Verifier se valida el controlador en una FPGA usando FPGA-in-the-Lo
 ## Inicio rápido
 
 1. Abrir el modelo `PID_antiwidup.slx` en MATLAB.
-2. Verificar que el controlador utilice tipos de datos en punto fijo `fixdt(1,64,26)` en entradas y señales principales.
+2. Verificar que las entradas y señales del controlador utilicen el tipo de punto fijo `fixdt(1,64,26)`.
 3. Ejecutar la simulación del lazo cerrado en Simulink.
 4. Generar el HDL del subsistema PID con HDL Coder.
 5. Crear el bloque FIL con HDL Verifier y configurar la compilación en Vivado `2023.1`.
@@ -82,12 +82,9 @@ Modelo PID con anti-windup en Simulink:
 
 ## Implementación en punto fijo
 
-Para la generación de HDL es necesario que todas las entradas y bloques aritméticos trabajen con tipos enteros o de punto fijo (`int`, `fixdt` o `logical`). En este ejemplo se utilizan:
+En la implementación en punto fijo del controlador se utiliza `fixdt(1,64,26)` para las entradas, las señales y las salidas de los bloques aritméticos, incluidos los sumadores y multiplicadores.
 
-- `fixdt(1,64,26)` para entradas y señales principales.
-- `fixdt(1,36,26)` para sumadores y multiplicadores.
-
-Esto deja 10 bits para la parte entera y 26 bits para la parte fraccionaria, una distribución razonable para señales de control con amplitud moderada y necesidad de buena resolución decimal.
+Este formato tiene 64 bits con signo y 26 bits fraccionarios. Los 38 bits restantes incluyen el bit de signo y 37 bits para la magnitud entera; su resolución es $2^{-26}$ y su rango representable va desde $-2^{37}$ hasta $2^{37}-2^{-26}$.
 
 También se habilita la opción `Saturate on overflow` para evitar desbordamientos que alteren el signo o introduzcan saltos no deseados en la dinámica del controlador.
 
